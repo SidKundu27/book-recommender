@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Spinner from './Spinner';
 import DOMPurify from 'dompurify';
 
 function Recommendations({
@@ -38,6 +39,7 @@ function Recommendations({
     <div className="Recommendations">
       {isloading ? (
         <div>
+          <Spinner/>
         </div>
       ):(
         <div>

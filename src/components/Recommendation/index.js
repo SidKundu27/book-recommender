@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Spinner from './Spinner';
+import Spinner from '../Spinner';
 import DOMPurify from 'dompurify';
+import './Recommendation.css'
 
 function Recommendations({
   genre
@@ -65,16 +66,18 @@ function Recommendations({
               <button className="close-btn" onClick={handleBookClose}>
                 X
               </button>
-              <h2>{selectedBook.title}</h2>
-              <img src={selectedBook.image_url} alt={selectedBook.title} />
-              {selectedBook.description && (
-                <div
-                  className="description"
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(selectedBook.description),
-                  }}
-                />
-              )}
+              <div className="content">
+                <h2>{selectedBook.title}</h2>
+                <img src={selectedBook.imageLinks?.thumbnail} alt={selectedBook.title} />
+                {selectedBook.description && (
+                  <div
+                    className="description"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(selectedBook.description),
+                    }}
+                  />
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -82,27 +85,5 @@ function Recommendations({
     </div>
   );
 }
-
-// Possible code for a recomendation popup
-{/* <div className="recommendations-overlay">
-  <div className="recommendations-popup">
-    <button className="close-btn" onClick={handleBookClose}>
-      X
-    </button>
-    <h2>Recommendations</h2>
-    <div className="recommendations-list">
-      {recommendations.map((book) => (
-        <div
-          key={book.id}
-          className="book"
-          onClick={() => handleBookClick(book)}
-        >
-          <img src={book.imageLinks?.thumbnail} alt={book.title} />
-          <h3>{book.title}</h3>
-        </div>
-      ))}
-    </div>
-  </div>
-</div> */}
 
 export default Recommendations;

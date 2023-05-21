@@ -1,0 +1,45 @@
+.BookDetails-Container {
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.BookDetails-Container h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.BookDetails-Container .BookDetails-Content {
+  display: flex;
+  align-items: center;
+}
+
+.BookDetails-Container img {
+  max-width: 200px;
+  height: auto;
+  margin-right: 20px;
+  margin-bottom: 20px;
+}
+
+.BookDetails-Container .BookDetails-Details {
+  display: flex;
+  flex-direction: column;
+  margin: 2rem;
+}
+
+.BookDetails-Container .BookDetails-Details div {
+  margin-bottom: 10px;
+}
+
+.BookDetails-Container button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.BookDetails-Container button:hover {
+  background-color: #0056b3;
+}

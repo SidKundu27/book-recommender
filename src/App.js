@@ -1,13 +1,15 @@
 import React, {useEffect, useState} from 'react';
 import './App.css';
 import BookForm from './components/BookForm';
-import BookDetails from './components/BookDetails';
-import Recommendations from './components/Recommendations';
+import BookDetails from './components/BookDetails'
+import Recommendations from './components/Recommendation';
+import MenuBar from './components/MenuBar';
 
 function App() {
   const [bookDetails, setBookDetails] = useState(null);
   const [bookTitle, setBookTitle] = useState('');
   const [genre, setGenre] = useState('');
+  const [activeButton, setActiveButton] = useState('newBook');
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
@@ -25,6 +27,7 @@ function App() {
       const responseJSON = await response.json();
       setBookDetails(responseJSON.book);
       setGenre(responseJSON.genre);
+      setActiveButton('bookDetails')
     }
   };
 
@@ -42,8 +45,14 @@ function App() {
         console.log(error)
       }
     };
+    const switchPage = () => {
+      if (bookDetails){
+        setActiveButton('bookDetails')
+      }
+    }
   
     fetchData();
+    switchPage();
   }, [])
 
   const handleInputChange = (event) => {
@@ -51,23 +60,32 @@ function App() {
   };
   
   return (
-    <div>
-      <BookForm
-        bookTitle={bookTitle}
-        handleInputChange={handleInputChange}
-        handleFormSubmit={handleFormSubmit}
+    <div className='App'>
+      <MenuBar
+        activeButton={activeButton}
+        setActiveButton={setActiveButton}
+        bookSelected={!bookDetails}
       />
-      {bookDetails &&
-        <div>
-          <BookDetails 
-            bookDetails={bookDetails}
-          />
+      {activeButton === "newBook" &&
+        <BookForm
+          bookTitle={bookTitle}
+          handleInputChange={handleInputChange}
+          handleFormSubmit={handleFormSubmit}
+        />
+      }
+      {activeButton === "bookDetails" &&
+        <BookDetails 
+          bookDetails={bookDetails}
+          setActiveButton={setActiveButton}
+        />
+      }
+      {activeButton === "recommendations" &&
+        // {viewRecommendations &&
           <Recommendations
             genre={genre}
           />
-        </div>
+        // }
       }
-
     </div>
   );
 }

@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import DOMPurify from 'dompurify';
 import './BookDetails.css';
+
 function BookDetails({
   bookDetails,
   setActiveButton
@@ -12,7 +14,11 @@ function BookDetails({
         <img src={bookDetails?.imageLinks?.thumbnail} alt={bookDetails?.title} />
         <div className='BookDetails-Details'>
           <div>Author: {bookDetails?.authors && bookDetails.authors.join(', ')}</div>
-          <p>{bookDetails?.description}</p>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(bookDetails?.description),
+            }}
+          />
           <button onClick={() => setActiveButton('recommendations')}>See Recommendations</button>
         </div>
       </div>

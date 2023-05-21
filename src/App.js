@@ -40,19 +40,16 @@ function App() {
           setBookDetails(data.book);
           setBookTitle(data.book.title)
           setGenre(data.genre)
+          if (data.book){
+            setActiveButton('bookDetails')
+          }
         }
       } catch (error) {
         console.log(error)
       }
     };
-    const switchPage = () => {
-      if (bookDetails){
-        setActiveButton('bookDetails')
-      }
-    }
   
     fetchData();
-    switchPage();
   }, [])
 
   const handleInputChange = (event) => {

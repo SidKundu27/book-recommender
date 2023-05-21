@@ -25,10 +25,13 @@ app.post("/api/findBook", (req, res) => {
 		.get('https://www.googleapis.com/books/v1/volumes', {
 			params: {
 				q: `intitle:${bookTitle}`,
+				maxResults: 1,
 			},
 		})
-		.then((response) => {
-			book = response.data.items[0].volumeInfo;
+		.then(async (response) => {
+			// Calls another api to get html tags (as google api does not give them without the id paramater)
+			const bookDetailsRequests = await axios.get(`https://www.googleapis.com/books/v1/volumes/${response.data.items[0].id}`)
+			book = bookDetailsRequests.data.volumeInfo;
 			genre =
 				book.categories && book.categories.length > 0
 					? book.categories[0]

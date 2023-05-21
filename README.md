@@ -39,3 +39,7 @@ To use the app, follow these steps:
 ## Backend
 
 This project uses Express.js, a popular web framework for Node.js, to handle the backend functionality. Express.js makes it easy to build scalable web applications and provides a robust set of features for building RESTful APIs.
+
+## Google Books API
+
+This project utilizes the Google Books API to fetch book information and recommendations. The Google Books API is a powerful tool that allows you to search for books, retrieve book details, and gather recommendations based on specific criteria.

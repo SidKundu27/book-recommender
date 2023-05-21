@@ -9,7 +9,7 @@ function App() {
   const [bookDetails, setBookDetails] = useState(null);
   const [bookTitle, setBookTitle] = useState('');
   const [genre, setGenre] = useState('');
-  const [activeButton, setActiveButton] = useState('newBook');
+  const [activeButton, setActiveButton] = useState('');
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
@@ -35,15 +35,18 @@ function App() {
     const fetchData = async () => {
       try {
         const response = await fetch("/api/getBook");
+        let value = "newBook"
         if (response.status === 200) {
           const data = await response.json();
           setBookDetails(data.book);
           setBookTitle(data.book.title)
           setGenre(data.genre)
           if (data.book){
-            setActiveButton('bookDetails')
+            value = "bookDetails"
           }
         }
+        // For Consistant Loading
+        setActiveButton(value)
       } catch (error) {
         console.log(error)
       }

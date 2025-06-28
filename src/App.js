@@ -9,6 +9,7 @@ import Auth from './components/Auth';
 import Settings from './components/Settings';
 import UserProfile from './components/UserProfile';
 import Navigation from './components/Navigation';
+import Home from './components/Home';
 
 function App() {
   const [bookDetails, setBookDetails] = useState(null);
@@ -27,6 +28,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [userPreferences, setUserPreferences] = useState({ useML: false });
+  const [navigationHistory, setNavigationHistory] = useState([]);
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
@@ -69,22 +71,19 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(searchData),
-      });
-
-      if (response.status === 200) {
-        const responseJSON = await response.json();
-        setSearchResults(responseJSON.books);
-        setActiveButton('searchResults');
-        setBookDetails(null); // Clear any previous book details
-      } else {
+      });        if (response.status === 200) {
+          const responseJSON = await response.json();
+          setSearchResults(responseJSON.books);
+          navigateTo('searchResults');
+          setBookDetails(null); // Clear any previous book details
+        } else {
+          setSearchResults([]);
+          navigateTo('searchResults');
+        }      } catch (error) {
+        console.error('Advanced search error:', error);
         setSearchResults([]);
-        setActiveButton('searchResults');
-      }
-    } catch (error) {
-      console.error('Advanced search error:', error);
-      setSearchResults([]);
-      setActiveButton('searchResults');
-    } finally {
+        navigateTo('searchResults');
+      }finally {
       setIsSearching(false);
     }
   };
@@ -92,21 +91,26 @@ function App() {
   const handleBookSelect = (book) => {
     setBookDetails(book);
     setGenre(book.categories && book.categories.length > 0 ? book.categories[0] : 'Unknown');
-    setActiveButton('bookDetails');
+    navigateTo('bookDetails');
   };
 
   const handleNewSearch = () => {
-    setActiveButton('advancedSearch');
+    navigateTo('advancedSearch', false); // Don't add to history for new search
     setSearchResults(null);
     setBookDetails(null);
     setBookTitle('');
+    setNavigationHistory([]); // Clear history
+  };
+
+  const handleHomeNavigation = () => {
+    navigateTo('home');
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch("/api/getBook");
-        let value = "newBook"
+        let value = "advancedSearch" // Default to advanced search
         if (response.status === 200) {
           const data = await response.json();
           setBookDetails(data.book);
@@ -116,11 +120,19 @@ function App() {
             value = "bookDetails"
           }
         }
-        // For Consistent Loading - default to advanced search for better UX
-        setActiveButton(value === "newBook" ? "advancedSearch" : value);
+        
+        // Check if user is logged in and set appropriate default view
+        const savedUser = localStorage.getItem('user');
+        if (savedUser && value === "advancedSearch") {
+          value = "home"; // Go to home if user is logged in and no specific book
+        }
+        
+        setActiveButton(value);
       } catch (error) {
         console.log(error)
-        setActiveButton("advancedSearch");
+        // If user is logged in, go to home, otherwise advanced search
+        const savedUser = localStorage.getItem('user');
+        setActiveButton(savedUser ? "home" : "advancedSearch");
       }
     };
   
@@ -191,6 +203,24 @@ function App() {
     }
   }, []);
 
+  // Navigation functions
+  const navigateTo = (view, addToHistory = true) => {
+    if (addToHistory && activeButton !== view) {
+      setNavigationHistory(prev => [...prev, activeButton]);
+    }
+    setActiveButton(view);
+  };
+
+  const goBack = () => {
+    if (navigationHistory.length > 0) {
+      const previousView = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory(prev => prev.slice(0, -1));
+      setActiveButton(previousView);
+    } else {
+      setActiveButton('advancedSearch');
+    }
+  };
+
   return (
     <div className={`App ${bookDetails ? 'has-book' : ''}`}>
       <Navigation
@@ -200,10 +230,18 @@ function App() {
         onShowSettings={() => setShowSettings(true)}
         onShowProfile={() => setShowProfile(true)}
         onNewSearch={handleNewSearch}
+        onHome={handleHomeNavigation}
         currentView={activeButton}
       />
       
       <div className="main-content">
+        {activeButton === "home" &&
+          <Home
+            user={user}
+            onBookSelect={handleBookSelect}
+            onNavigate={navigateTo}
+          />
+        }
         {activeButton === "newBook" &&
           <LandingPage
             bookTitle={bookTitle}
@@ -230,7 +268,8 @@ function App() {
         {activeButton === "bookDetails" &&
           <BookDetails 
             bookDetails={bookDetails}
-            setActiveButton={setActiveButton}
+            setActiveButton={navigateTo}
+            goBack={goBack}
             user={user}
             useMLRecommendations={userPreferences.useML}
           />
@@ -238,7 +277,7 @@ function App() {
         {activeButton === "recommendations" &&
           <Recommendations
             genre={genre}
-            setActiveButton={setActiveButton}
+            setActiveButton={navigateTo}
             user={user}
             useMLRecommendations={userPreferences.useML}
           />

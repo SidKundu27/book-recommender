@@ -8,17 +8,23 @@ const Navigation = ({
   onShowSettings, 
   onShowProfile, 
   onNewSearch,
+  onHome,
   currentView 
 }) => {
   return (
     <nav className="navigation">
       <div className="nav-left">
-        <div className="logo" onClick={onNewSearch}>
+        <div className="logo" onClick={onHome}>
           📚 BookFinder
         </div>
+        {user && (
+          <button className="nav-btn" onClick={onHome} title="My Library">
+            🏠 Home
+          </button>
+        )}
         {currentView !== 'advancedSearch' && (
           <button className="nav-btn" onClick={onNewSearch}>
-            New Search
+            🔍 Search
           </button>
         )}
       </div>

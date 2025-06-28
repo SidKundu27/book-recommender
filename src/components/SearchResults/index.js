@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SearchResults.css';
 
 function SearchResults({
@@ -11,6 +11,23 @@ function SearchResults({
 }) {
   const [sortBy, setSortBy] = useState('relevance');
   const [viewType, setViewType] = useState('grid');
+  const [defaultImage, setDefaultImage] = useState('');
+
+  // Fetch a default image on component mount
+  useEffect(() => {
+    const fetchDefaultImage = async () => {
+      try {
+        const response = await fetch('https://dog.ceo/api/breeds/image/random');
+        const data = await response.json();
+        setDefaultImage(data.message);
+      } catch (error) {
+        console.error('Error fetching default image:', error);
+        setDefaultImage('https://images.dog.ceo/breeds/hound-english/n02089973_612.jpg');
+      }
+    };
+    
+    fetchDefaultImage();
+  }, []);
 
   const sortResults = (results) => {
     if (!results) return [];
@@ -171,9 +188,14 @@ function SearchResults({
               >
                 <div className="book-cover-section">
                   <img 
-                    src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || '/placeholder-book.png'} 
+                    src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
                     alt={book.title}
                     className="result-book-cover"
+                    onError={(e) => {
+                      if (e.target.src !== defaultImage) {
+                        e.target.src = defaultImage;
+                      }
+                    }}
                   />
                   {book.averageRating && (
                     <div className="rating-badge">

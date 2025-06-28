@@ -12,6 +12,23 @@ function Recommendations({
   const [isloading, setIsLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [defaultImage, setDefaultImage] = useState('');
+
+  // Fetch a default image on component mount
+  useEffect(() => {
+    const fetchDefaultImage = async () => {
+      try {
+        const response = await fetch('https://dog.ceo/api/breeds/image/random');
+        const data = await response.json();
+        setDefaultImage(data.message);
+      } catch (error) {
+        console.error('Error fetching default image:', error);
+        setDefaultImage('https://images.dog.ceo/breeds/hound-english/n02089973_612.jpg');
+      }
+    };
+    
+    fetchDefaultImage();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,9 +114,14 @@ function Recommendations({
             >
               <div className="book-cover-container">
                 <img 
-                  src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail} 
+                  src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
                   alt={book.title}
                   className="book-cover"
+                  onError={(e) => {
+                    if (e.target.src !== defaultImage) {
+                      e.target.src = defaultImage;
+                    }
+                  }}
                 />
                 <div className="book-overlay">
                   <span>View Details</span>
@@ -130,8 +152,13 @@ function Recommendations({
               <div className="modal-content">
                 <div className="modal-image">
                   <img 
-                    src={selectedBook.imageLinks?.thumbnail || selectedBook.imageLinks?.smallThumbnail} 
+                    src={selectedBook.imageLinks?.thumbnail || selectedBook.imageLinks?.smallThumbnail || defaultImage} 
                     alt={selectedBook.title}
+                    onError={(e) => {
+                      if (e.target.src !== defaultImage) {
+                        e.target.src = defaultImage;
+                      }
+                    }}
                   />
                 </div>
                 <div className="modal-details">

@@ -260,37 +260,82 @@ const getGoogleBasedRecommendations = (res) => {
 		return res.status(404).send({ error: "No Genre Found" });
 	}
 
-	// Get recommendations based on genre and current book
+	// Enhanced search queries for better recommendations
 	const searchQueries = [
+		// Genre-based recommendations
 		`subject:${genre}`,
-		// Add author-based recommendations if available
-		...(book.authors ? book.authors.map(author => `inauthor:"${author}"`) : []),
-		// Add similar complexity books
-		`subject:${genre}+pages:${book.pageCount || 200}`
+		`subject:"${genre}"`,
+		// Author-based recommendations if available
+		...(book.authors ? book.authors.slice(0, 2).map(author => `inauthor:"${author}"`).filter(Boolean) : []),
+		// Similar page count for complexity matching
+		...(book.pageCount ? [`subject:${genre}+pages:${Math.max(100, book.pageCount - 100)}-${book.pageCount + 100}`] : []),
+		// Popular books in genre
+		`subject:${genre}+orderBy=relevance`,
+		// Recent books in genre (if we have publication date)
+		...(book.publishedDate ? [`subject:${genre}+publishedDate:${book.publishedDate.split('-')[0]}-${new Date().getFullYear()}`] : []),
+		// Highly rated books in genre
+		`subject:${genre}+filter=paid-ebooks`,
 	];
 
 	// Execute multiple searches for diverse recommendations
-	const searchPromises = searchQueries.slice(0, 3).map(query =>
+	const searchPromises = searchQueries.slice(0, 5).map((query, index) =>
 		axios.get('https://www.googleapis.com/books/v1/volumes', {
 			params: {
 				q: query,
-				maxResults: 8,
-				orderBy: 'relevance'
+				maxResults: index === 0 ? 15 : 10, // More results from primary genre search
+				orderBy: index < 2 ? 'relevance' : 'newest',
+				printType: 'books',
+				langRestrict: 'en' // Focus on English books for better quality
 			},
-		}).catch(() => ({ data: { items: [] } })) // Graceful failure
+		}).catch(error => {
+			console.log(`Search query failed: ${query}`, error.message);
+			return { data: { items: [] } };
+		})
 	);
 
 	Promise.all(searchPromises)
 		.then(async (responses) => {
 			// Combine and deduplicate results
 			const allItems = responses.flatMap(response => response.data.items || []);
-			const uniqueItems = allItems.filter((item, index, self) =>
-				index === self.findIndex(t => t.id === item.id) && 
-				item.id !== book.id // Exclude the current book
-			);
+			
+			// Enhanced deduplication and filtering
+			const uniqueItems = allItems.filter((item, index, self) => {
+				if (!item || !item.id || !item.volumeInfo) return false;
+				
+				// Exclude the current book and ensure unique IDs
+				const isUnique = index === self.findIndex(t => t.id === item.id);
+				const isNotCurrentBook = item.id !== book.id;
+				const hasTitle = item.volumeInfo.title;
+				const hasValidImage = item.volumeInfo.imageLinks?.thumbnail || item.volumeInfo.imageLinks?.smallThumbnail;
+				
+				return isUnique && isNotCurrentBook && hasTitle && hasValidImage;
+			});
+
+			// Prioritize books with better metadata
+			const scoredBooks = uniqueItems.map(item => {
+				let score = 0;
+				const volumeInfo = item.volumeInfo;
+				
+				// Scoring based on available metadata
+				if (volumeInfo.description) score += 3;
+				if (volumeInfo.averageRating) score += 2;
+				if (volumeInfo.ratingsCount && volumeInfo.ratingsCount > 10) score += 2;
+				if (volumeInfo.publishedDate) score += 1;
+				if (volumeInfo.pageCount && volumeInfo.pageCount > 50) score += 1;
+				if (volumeInfo.authors && volumeInfo.authors.length > 0) score += 2;
+				if (volumeInfo.categories && volumeInfo.categories.length > 0) score += 1;
+				if (volumeInfo.imageLinks?.thumbnail) score += 1;
+				
+				return { ...item, qualityScore: score };
+			});
+
+			// Sort by quality score and take the best ones
+			const bestBooks = scoredBooks
+				.sort((a, b) => b.qualityScore - a.qualityScore)
+				.slice(0, 12);
 
 			// Get detailed information for recommendations
-			const bookDetailsRequests = uniqueItems.slice(0, 10).map((item) =>
+			const bookDetailsRequests = bestBooks.map((item) =>
 				axios.get(`https://www.googleapis.com/books/v1/volumes/${item.id}`)
 					.then(detailResponse => enhanceBookData(detailResponse.data.volumeInfo))
 					.catch(() => enhanceBookData(item.volumeInfo))
@@ -299,9 +344,19 @@ const getGoogleBasedRecommendations = (res) => {
 			try {
 				const detailedRecommendations = await Promise.all(bookDetailsRequests);
 				
-				// Sort by popularity score for better recommendations
+				// Final filtering and sorting
 				recommendations = detailedRecommendations
-					.sort((a, b) => (b.popularityScore || 0) - (a.popularityScore || 0))
+					.filter(book => book && book.title) // Ensure valid books
+					.sort((a, b) => {
+						// Prioritize books with ratings, then by publication date
+						const aRating = a.averageRating || 0;
+						const bRating = b.averageRating || 0;
+						const aYear = a.publishedDate ? new Date(a.publishedDate).getFullYear() : 0;
+						const bYear = b.publishedDate ? new Date(b.publishedDate).getFullYear() : 0;
+						
+						if (aRating !== bRating) return bRating - aRating;
+						return bYear - aYear;
+					})
 					.slice(0, 6);
 
 				res.status(200).send(recommendations);

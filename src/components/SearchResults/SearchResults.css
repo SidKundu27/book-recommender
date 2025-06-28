@@ -230,7 +230,7 @@
 }
 
 .results-grid.grid {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
 .results-grid.list {
@@ -248,11 +248,13 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   flex-direction: column;
+  height: 500px; /* Fixed height to prevent long cards */
 }
 
 .results-grid.list .result-card {
   flex-direction: row;
-  max-height: 250px;
+  height: 220px; /* Fixed height for list view */
+  max-height: 220px;
 }
 
 .result-card:hover {
@@ -266,19 +268,21 @@
 }
 
 .results-grid.grid .book-cover-section {
-  height: 300px;
+  height: 220px; /* Reduced height for better proportions */
 }
 
 .results-grid.list .book-cover-section {
-  width: 200px;
-  height: 250px;
+  width: 140px; /* Reduced width for list view */
+  height: 220px;
 }
 
 .result-book-cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   transition: transform 0.3s ease;
+  background-color: #f8f9fa; /* Fallback background */
 }
 
 .result-card:hover .result-book-cover {
@@ -304,6 +308,8 @@
   display: flex;
   flex-direction: column;
   color: #333;
+  min-height: 0; /* Allow flex children to shrink */
+  overflow: hidden; /* Prevent content overflow */
 }
 
 .result-book-title {
@@ -389,15 +395,16 @@
 
 .result-description {
   flex: 1;
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.4;
   color: #555;
   margin-bottom: 1rem;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2; /* Reduced to 2 lines */
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 0;
 }
 
 .view-details-btn {

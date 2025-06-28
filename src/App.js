@@ -4,6 +4,7 @@ import BookForm from './components/BookForm';
 import BookDetails from './components/BookDetails'
 import Recommendations from './components/Recommendation';
 import MenuBar from './components/MenuBar';
+import LandingPage from './components/LandingPage';
 
 function App() {
   const [bookDetails, setBookDetails] = useState(null);
@@ -60,14 +61,9 @@ function App() {
   };
   
   return (
-    <div className='App'>
-      <MenuBar
-        activeButton={activeButton}
-        setActiveButton={setActiveButton}
-        bookSelected={!bookDetails}
-      />
+    <div className={`App ${bookDetails ? 'has-book' : ''}`}>
       {activeButton === "newBook" &&
-        <BookForm
+        <LandingPage
           bookTitle={bookTitle}
           handleInputChange={handleInputChange}
           handleFormSubmit={handleFormSubmit}
@@ -80,11 +76,10 @@ function App() {
         />
       }
       {activeButton === "recommendations" &&
-        // {viewRecommendations &&
-          <Recommendations
-            genre={genre}
-          />
-        // }
+        <Recommendations
+          genre={genre}
+          setActiveButton={setActiveButton}
+        />
       }
     </div>
   );

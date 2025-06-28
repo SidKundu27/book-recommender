@@ -1,7 +1,21 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const axios = require('axios');
+const cors = require('cors');
+
+// Import backend modules
+const { router: userManagement, userProfiles } = require('./modules/userManagement');
+const readingLists = require('./modules/readingLists');
+// const { router: mlRecommendations } = require('./modules/mlRecommendations');
+const BasicMLRecommendationEngine = require('./modules/mlRecommendations');
+
 const app = express()
+
+// Enable CORS for frontend
+app.use(cors({
+  origin: 'http://localhost:3000', // React app URL
+  credentials: true
+}));
 
 let book = [];
 let genre = "";
@@ -9,9 +23,17 @@ let recommendations = []
 let searchHistory = []; // For future ML features
 let userPreferences = {}; // For future ML features
 
+// Initialize ML engine
+const mlEngine = new BasicMLRecommendationEngine();
+
 // Configuring body parser middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+// Integrate backend modules
+app.use('/api/users', userManagement);
+app.use('/api/reading-lists', readingLists);
+// app.use('/api/ml', mlRecommendations);
 
 // Helper function to build Google Books API query
 const buildGoogleBooksQuery = (searchData) => {
@@ -211,8 +233,29 @@ app.post("/api/findBook", (req, res) => {
 		});
 })
 
-// Enhanced recommendations with better algorithm
+// Enhanced recommendations with mode selection (Google vs ML)
 app.get('/api/getBookRecommendation', (req, res) => {
+	const useML = req.query.useML === 'true';
+	const userId = req.query.userId;
+	
+	if (useML && userId && userProfiles[userId]) {
+		// Use ML-based recommendations
+		try {
+			const mlRecommendations = mlEngine.getRecommendations(userId, 6);
+			res.status(200).send(mlRecommendations);
+		} catch (error) {
+			console.error('ML recommendations error:', error);
+			// Fallback to Google-based recommendations
+			getGoogleBasedRecommendations(res);
+		}
+	} else {
+		// Use Google-based recommendations (original logic)
+		getGoogleBasedRecommendations(res);
+	}
+});
+
+// Separate function for Google-based recommendations
+const getGoogleBasedRecommendations = (res) => {
 	if (genre === "") {
 		return res.status(404).send({ error: "No Genre Found" });
 	}
@@ -271,6 +314,41 @@ app.get('/api/getBookRecommendation', (req, res) => {
 			console.error('Recommendations error:', error);
 			res.status(500).send({ error: "Recommendation service unavailable" });
 		});
+};
+
+// New endpoint to get/set user recommendation preferences
+app.get('/api/recommendation-settings/:userId', (req, res) => {
+	const userId = req.params.userId;
+	const profile = userProfiles[userId];
+	
+	if (!profile) {
+		return res.status(404).send({ error: "User not found" });
+	}
+	
+	res.status(200).send({
+		useML: profile.recommendations?.useML || false,
+		favoriteGenres: profile.favoriteGenres || [],
+		readingPreferences: profile.readingPreferences || {}
+	});
+});
+
+app.post('/api/recommendation-settings/:userId', (req, res) => {
+	const userId = req.params.userId;
+	const { useML } = req.body;
+	const profile = userProfiles[userId];
+	
+	if (!profile) {
+		return res.status(404).send({ error: "User not found" });
+	}
+	
+	if (!profile.recommendations) {
+		profile.recommendations = {};
+	}
+	
+	profile.recommendations.useML = useML;
+	profile.recommendations.lastUpdated = new Date();
+	
+	res.status(200).send({ message: "Settings updated", useML });
 });
 
 // New endpoint for ML preparation - get search analytics

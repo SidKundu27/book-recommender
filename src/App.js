@@ -1,12 +1,14 @@
 import React, {useEffect, useState} from 'react';
 import './App.css';
-import BookForm from './components/BookForm';
 import BookDetails from './components/BookDetails'
 import Recommendations from './components/Recommendation';
-import MenuBar from './components/MenuBar';
 import LandingPage from './components/LandingPage';
 import AdvancedSearch from './components/AdvancedSearch';
 import SearchResults from './components/SearchResults';
+import Auth from './components/Auth';
+import Settings from './components/Settings';
+import UserProfile from './components/UserProfile';
+import Navigation from './components/Navigation';
 
 function App() {
   const [bookDetails, setBookDetails] = useState(null);
@@ -17,6 +19,14 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('title');
   const [isSearching, setIsSearching] = useState(false);
+  
+  // User authentication state
+  const [user, setUser] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [userPreferences, setUserPreferences] = useState({ useML: false });
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
@@ -120,44 +130,139 @@ function App() {
   const handleInputChange = (event) => {
     setBookTitle(event.target.value);
   };
-  
+
+  // Authentication functions
+  const handleLogin = (userData, token) => {
+    setUser(userData);
+    setAuthToken(token);
+    setShowAuth(false);
+    fetchUserPreferences(userData.id);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://localhost:5000/api/users/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    setUser(null);
+    setAuthToken(null);
+    setUserPreferences({ useML: false });
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('user');
+  };
+
+  const fetchUserPreferences = async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/recommendation-settings/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserPreferences(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user preferences:', error);
+    }
+  };
+
+  // Check for existing authentication on app load
+  useEffect(() => {
+    const savedToken = localStorage.getItem('authToken');
+    const savedUser = localStorage.getItem('user');
+    
+    if (savedToken && savedUser) {
+      try {
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+        setAuthToken(savedToken);
+        fetchUserPreferences(userData.id);
+      } catch (error) {
+        console.error('Error restoring user session:', error);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('user');
+      }
+    }
+  }, []);
+
   return (
     <div className={`App ${bookDetails ? 'has-book' : ''}`}>
-      {activeButton === "newBook" &&
-        <LandingPage
-          bookTitle={bookTitle}
-          handleInputChange={handleInputChange}
-          handleFormSubmit={handleFormSubmit}
-        />
-      }
-      {activeButton === "advancedSearch" &&
-        <AdvancedSearch
-          onSearch={handleAdvancedSearch}
-          isSearching={isSearching}
-        />
-      }
-      {activeButton === "searchResults" &&
-        <SearchResults
-          searchResults={searchResults}
-          searchQuery={searchQuery}
-          searchType={searchType}
-          onBookSelect={handleBookSelect}
-          onNewSearch={handleNewSearch}
-          isLoading={isSearching}
-        />
-      }
-      {activeButton === "bookDetails" &&
-        <BookDetails 
-          bookDetails={bookDetails}
-          setActiveButton={setActiveButton}
-        />
-      }
-      {activeButton === "recommendations" &&
-        <Recommendations
-          genre={genre}
-          setActiveButton={setActiveButton}
-        />
-      }
+      <Navigation
+        user={user}
+        onLogin={() => setShowAuth(true)}
+        onLogout={handleLogout}
+        onShowSettings={() => setShowSettings(true)}
+        onShowProfile={() => setShowProfile(true)}
+        onNewSearch={handleNewSearch}
+        currentView={activeButton}
+      />
+      
+      <div className="main-content">
+        {activeButton === "newBook" &&
+          <LandingPage
+            bookTitle={bookTitle}
+            handleInputChange={handleInputChange}
+            handleFormSubmit={handleFormSubmit}
+          />
+        }
+        {activeButton === "advancedSearch" &&
+          <AdvancedSearch
+            onSearch={handleAdvancedSearch}
+            isSearching={isSearching}
+          />
+        }
+        {activeButton === "searchResults" &&
+          <SearchResults
+            searchResults={searchResults}
+            searchQuery={searchQuery}
+            searchType={searchType}
+            onBookSelect={handleBookSelect}
+            onNewSearch={handleNewSearch}
+            isLoading={isSearching}
+          />
+        }
+        {activeButton === "bookDetails" &&
+          <BookDetails 
+            bookDetails={bookDetails}
+            setActiveButton={setActiveButton}
+            user={user}
+            useMLRecommendations={userPreferences.useML}
+          />
+        }
+        {activeButton === "recommendations" &&
+          <Recommendations
+            genre={genre}
+            setActiveButton={setActiveButton}
+            user={user}
+            useMLRecommendations={userPreferences.useML}
+          />
+        }
+      </div>
+
+      {/* Modals */}
+      <Auth
+        isOpen={showAuth}
+        onClose={() => setShowAuth(false)}
+        onLogin={handleLogin}
+      />
+      
+      <Settings
+        user={user}
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
+      
+      <UserProfile
+        user={user}
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+      />
     </div>
   );
 }

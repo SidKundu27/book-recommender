@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import './BookDetails.css';
 
 function BookDetails({
   bookDetails,
-  setActiveButton
+  setActiveButton,
+  user,
+  useMLRecommendations = false
 }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isInReadingList, setIsInReadingList] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
+  const [userLists, setUserLists] = useState([]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserLists();
+    }
+  }, [user]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown';
@@ -45,6 +57,73 @@ function BookDetails({
     }
     
     return stars;
+  };
+
+  // User action functions
+  const toggleFavorite = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const method = isFavorite ? 'DELETE' : 'POST';
+      
+      const response = await fetch('http://localhost:5000/api/reading-lists/favorites', {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ bookId: bookDetails.id, book: bookDetails })
+      });
+      
+      if (response.ok) {
+        setIsFavorite(!isFavorite);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  const addToReadingList = async (listId) => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch(`http://localhost:5000/api/reading-lists/${listId}/books`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ book: bookDetails })
+      });
+      
+      if (response.ok) {
+        setIsInReadingList(true);
+        setShowListModal(false);
+      }
+    } catch (error) {
+      console.error('Error adding to reading list:', error);
+    }
+  };
+
+  const fetchUserLists = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/reading-lists', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserLists(data.lists || []);
+      }
+    } catch (error) {
+      console.error('Error fetching user lists:', error);
+    }
   };
 
   return (
@@ -191,6 +270,31 @@ function BookDetails({
         )}
         
         <div className="action-section">
+          {user && (
+            <div className="user-actions">
+              <button 
+                className={`action-btn favorite-btn ${isFavorite ? 'active' : ''}`}
+                onClick={toggleFavorite}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <span className="action-icon">{isFavorite ? '❤️' : '🤍'}</span>
+                <span>{isFavorite ? 'Favorited' : 'Add to Favorites'}</span>
+              </button>
+              
+              <button 
+                className="action-btn list-btn"
+                onClick={() => {
+                  fetchUserLists();
+                  setShowListModal(true);
+                }}
+                title="Add to reading list"
+              >
+                <span className="action-icon">📚</span>
+                <span>Add to List</span>
+              </button>
+            </div>
+          )}
+          
           <button 
             className="recommendations-button-new"
             onClick={() => setActiveButton('recommendations')}
@@ -199,7 +303,9 @@ function BookDetails({
               <span className="button-icon">🎯</span>
               <div className="button-text">
                 <span className="button-main">Get Recommendations</span>
-                <span className="button-sub">Discover similar books</span>
+                <span className="button-sub">
+                  {useMLRecommendations && user ? 'AI powered suggestions' : 'Discover similar books'}
+                </span>
               </div>
               <span className="button-arrow">→</span>
             </div>
@@ -226,6 +332,35 @@ function BookDetails({
           )}
         </div>
       </div>
+      
+      {/* Reading List Modal */}
+      {showListModal && (
+        <div className="modal-overlay" onClick={() => setShowListModal(false)}>
+          <div className="list-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add to Reading List</h3>
+              <button className="modal-close" onClick={() => setShowListModal(false)}>×</button>
+            </div>
+            
+            <div className="lists-container">
+              {userLists.map(list => (
+                <button
+                  key={list.id}
+                  className="list-option"
+                  onClick={() => addToReadingList(list.id)}
+                >
+                  <span className="list-name">{list.name}</span>
+                  <span className="list-count">{list.books?.length || 0} books</span>
+                </button>
+              ))}
+              
+              {userLists.length === 0 && (
+                <p className="no-lists">No reading lists yet. Create one in your profile!</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

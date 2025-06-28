@@ -7,3 +7,15 @@
 .App.has-book {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
+
+/* Main content wrapper to account for navigation */
+.main-content {
+  padding-top: 70px; /* Height of navigation */
+}
+
+/* Navigation spacing for responsive design */
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 60px;
+  }
+}

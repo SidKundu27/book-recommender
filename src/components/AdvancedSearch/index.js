@@ -7,7 +7,6 @@ function AdvancedSearch({
 }) {
   const [searchType, setSearchType] = useState('title');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [filters, setFilters] = useState({
     author: '',
     genre: '',

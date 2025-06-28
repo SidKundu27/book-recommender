@@ -5,7 +5,9 @@ import './Recommendation.css'
 
 function Recommendations({
   genre,
-  setActiveButton
+  setActiveButton,
+  user,
+  useMLRecommendations = false
 }) {
   const [isloading, setIsLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
@@ -15,7 +17,16 @@ function Recommendations({
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch("/api/getBookRecommendation");
+        // Build request URL with parameters for ML recommendations
+        const params = new URLSearchParams();
+        if (useMLRecommendations && user) {
+          params.append('useML', 'true');
+          params.append('userId', user.id);
+        }
+        
+        const url = `/api/getBookRecommendation${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await fetch(url);
+        
         if (response.status === 200) {
           const data = await response.json();
           setRecommendations(data);
@@ -27,7 +38,7 @@ function Recommendations({
     };
   
     fetchData();
-  }, [genre])
+  }, [genre, useMLRecommendations, user])
 
   const handleBookClick = (book) => {
     setSelectedBook(book);
@@ -59,10 +70,20 @@ function Recommendations({
         </button>
         
         <div className="recommendations-header">
-          <h1>Recommended Books</h1>
+          <div className="header-content">
+            <h1>Recommended Books</h1>
+            <div className="recommendation-mode">
+              {useMLRecommendations && user ? (
+                <span className="ml-mode">🤖 AI Powered Recommendations</span>
+              ) : (
+                <span className="google-mode">🔍 Google Books Recommendations</span>
+              )}
+            </div>
+          </div>
           {genre && (
             <p className="genre-subtitle">
               Based on the <span className="genre-highlight">{genre}</span> genre
+              {useMLRecommendations && user && ' and your reading preferences'}
             </p>
           )}
         </div>

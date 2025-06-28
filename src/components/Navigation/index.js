@@ -13,49 +13,66 @@ const Navigation = ({
 }) => {
   return (
     <nav className="navigation">
-      <div className="nav-left">
-        <div className="logo" onClick={onHome}>
-          📚 BookFinder
-        </div>
-        {user && (
-          <button className="nav-btn" onClick={onHome} title="My Library">
-            🏠 Home
-          </button>
-        )}
-        {currentView !== 'advancedSearch' && (
-          <button className="nav-btn" onClick={onNewSearch}>
-            🔍 Search
-          </button>
-        )}
-      </div>
-
-      <div className="nav-right">
-        {user ? (
-          <div className="user-menu">
-            <div className="user-info" onClick={onShowProfile}>
-              <div className="user-avatar">
-                {user.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <span className="username">{user.username}</span>
-            </div>
-            
-            <div className="user-actions">
-              <button className="nav-btn" onClick={onShowProfile} title="My Books">
-                📚
-              </button>
-              <button className="nav-btn" onClick={onShowSettings} title="Settings">
-                ⚙️
-              </button>
-              <button className="nav-btn logout" onClick={onLogout} title="Logout">
-                ↗️
-              </button>
-            </div>
+      <div className="nav-container">
+        <div className="nav-left">
+          <div className="logo" onClick={onHome}>
+            📚 BookFinder
           </div>
-        ) : (
-          <button className="login-btn" onClick={onLogin}>
-            Sign In
-          </button>
-        )}
+          
+          <div className="nav-links">
+            {user && (
+              <button 
+                className={`nav-btn ${currentView === 'home' ? 'active' : ''}`} 
+                onClick={onHome} 
+                title="My Library"
+              >
+                🏠 Home
+              </button>
+            )}
+            <button 
+              className={`nav-btn ${currentView === 'advancedSearch' || currentView === 'search' ? 'active' : ''}`} 
+              onClick={onNewSearch}
+            >
+              🔍 Search
+            </button>
+          </div>
+        </div>
+
+        <div className="nav-right">
+          {user ? (
+            <div className="user-menu">
+              <button 
+                className={`nav-btn ${currentView === 'profile' ? 'active' : ''}`} 
+                onClick={onShowProfile} 
+                title="My Books"
+              >
+                📚 My Books
+              </button>
+              <button 
+                className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`} 
+                onClick={onShowSettings} 
+                title="Settings"
+              >
+                ⚙️ Settings
+              </button>
+              
+              <div className="user-info" onClick={onShowProfile}>
+                <div className="user-avatar">
+                  {user.username?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <span className="username">{user.username}</span>
+              </div>
+              
+              <button className="nav-btn logout" onClick={onLogout} title="Logout">
+                ↗️ Logout
+              </button>
+            </div>
+          ) : (
+            <button className="login-btn" onClick={onLogin}>
+              Sign In
+            </button>
+          )}
+        </div>
       </div>
     </nav>
   );

@@ -219,12 +219,7 @@ function BookDetails({
                 <button 
                   className="action-btn-new info-btn"
                   onClick={() => {
-                    if (bookDetails.infoLink.includes('google.com/books') || bookDetails.infoLink.includes('books.google')) {
-                      window.open(bookDetails.infoLink, '_blank');
-                    } else {
-                      alert('Purchase information may not be available for this book. The link will redirect to the publisher or distributor page.');
-                      window.open(bookDetails.infoLink, '_blank');
-                    }
+                    window.open(bookDetails.infoLink, '_blank');
                   }}
                 >
                   <span className="action-icon">🛒</span>

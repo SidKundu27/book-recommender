@@ -1,10 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import './UserProfile.css';
 
+// Define reading list types
+const readingListTypes = [
+  {
+    id: 'want-to-read',
+    name: 'Want to Read',
+    icon: '📚',
+    description: 'Books you plan to read in the future'
+  },
+  {
+    id: 'currently-reading',
+    name: 'Currently Reading',
+    icon: '📖',
+    description: 'Books you are actively reading now'
+  },
+  {
+    id: 'read',
+    name: 'Read',
+    icon: '✅',
+    description: 'Books you have finished reading'
+  },
+  {
+    id: 'dropped',
+    name: 'Dropped',
+    icon: '❌',
+    description: 'Books you started but decided not to finish'
+  },
+  {
+    id: 'on-hiatus',
+    name: 'On Hiatus',
+    icon: '⏸️',
+    description: 'Books you paused and might return to later'
+  },
+  {
+    id: 'favorites',
+    name: 'Favorites',
+    icon: '⭐',
+    description: 'Your most beloved books'
+  },
+  {
+    id: 'custom',
+    name: 'Custom List',
+    icon: '📝',
+    description: 'Create your own custom reading list'
+  }
+];
+
 const UserProfile = ({ user, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('favorites');
   const [favorites, setFavorites] = useState([]);
   const [readingLists, setReadingLists] = useState([]);
+  const [showCreateListModal, setShowCreateListModal] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [newListType, setNewListType] = useState('custom');
+
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -101,23 +151,35 @@ const UserProfile = ({ user, isOpen, onClose }) => {
   };
 
   const createNewList = async () => {
-    const name = prompt('Enter list name:');
-    if (!name) return;
+    setShowCreateListModal(true);
+  };
+
+  const handleCreateList = async () => {
+    if (!newListName.trim()) return;
 
     try {
       const token = localStorage.getItem('authToken');
+      const listData = {
+        name: newListName,
+        type: newListType,
+        description: readingListTypes.find(t => t.id === newListType)?.description || ''
+      };
+
       const response = await fetch('http://localhost:5000/api/reading-lists', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ name })
+        body: JSON.stringify(listData)
       });
 
       if (response.ok) {
         const newList = await response.json();
         setReadingLists(prev => [...prev, newList.list]);
+        setShowCreateListModal(false);
+        setNewListName('');
+        setNewListType('custom');
       }
     } catch (error) {
       console.error('Error creating list:', error);
@@ -289,6 +351,75 @@ const UserProfile = ({ user, isOpen, onClose }) => {
             </div>
           )}
         </div>
+
+        {/* Create List Modal */}
+        {showCreateListModal && (
+          <div className="create-list-modal-overlay" onClick={() => setShowCreateListModal(false)}>
+            <div className="create-list-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Create New Reading List</h3>
+                <button 
+                  className="modal-close" 
+                  onClick={() => setShowCreateListModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="modal-content">
+                <div className="list-types-grid">
+                  {readingListTypes.map(type => (
+                    <div
+                      key={type.id}
+                      className={`list-type-option ${newListType === type.id ? 'selected' : ''}`}
+                      onClick={() => {
+                        setNewListType(type.id);
+                        if (type.id !== 'custom') {
+                          setNewListName(type.name);
+                        } else {
+                          setNewListName('');
+                        }
+                      }}
+                    >
+                      <div className="type-icon">{type.icon}</div>
+                      <div className="type-name">{type.name}</div>
+                      <div className="type-description">{type.description}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {(newListType === 'custom' || newListName !== readingListTypes.find(t => t.id === newListType)?.name) && (
+                  <div className="custom-name-input">
+                    <label>List Name:</label>
+                    <input
+                      type="text"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                      placeholder="Enter list name..."
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                <div className="modal-actions">
+                  <button 
+                    className="cancel-btn" 
+                    onClick={() => setShowCreateListModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="create-btn" 
+                    onClick={handleCreateList}
+                    disabled={!newListName.trim()}
+                  >
+                    Create List
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -242,6 +242,17 @@ function App() {
             onNavigate={navigateTo}
           />
         }
+        {activeButton === "home" &&
+          <Home
+            user={user}
+            onBookSelect={handleBookSelect}
+            onNavigate={(view) => {
+              if (view === 'login') setShowAuth(true);
+              else if (view === 'profile') setShowProfile(true);
+              else navigateTo(view);
+            }}
+          />
+        }
         {activeButton === "newBook" &&
           <LandingPage
             bookTitle={bookTitle}

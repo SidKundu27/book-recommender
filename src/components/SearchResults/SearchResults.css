@@ -248,13 +248,12 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   flex-direction: column;
-  height: 500px; /* Fixed height to prevent long cards */
+  min-height: 500px; /* Minimum height instead of fixed */
 }
 
 .results-grid.list .result-card {
   flex-direction: row;
-  height: 220px; /* Fixed height for list view */
-  max-height: 220px;
+  min-height: 220px; /* Minimum height for list view */
 }
 
 .result-card:hover {
@@ -318,28 +317,32 @@
 }
 
 .result-book-title {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0 0 0.5rem 0;
-  line-height: 1.3;
+  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3; /* Allow 3 lines for longer titles */
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 .result-book-subtitle {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #7f8c8d;
   margin: 0 0 0.5rem 0;
   font-style: italic;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+  -webkit-line-clamp: 2; /* Allow 2 lines for subtitles */
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 .result-book-author {
@@ -405,11 +408,12 @@
   color: #555;
   margin-bottom: 1rem;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* Reduced to 2 lines */
-  line-clamp: 2;
+  -webkit-line-clamp: 3; /* Allow 3 lines for description */
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 0;
+  word-wrap: break-word;
 }
 
 .view-details-btn {

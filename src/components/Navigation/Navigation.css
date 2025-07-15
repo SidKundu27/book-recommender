@@ -115,6 +115,7 @@
   font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
+}
 .username {
   font-weight: 600;
   color: #2c3e50;
@@ -208,7 +209,8 @@
     font-size: 12px;
   }
 }
-  
+
+@media (max-width: 320px) {
   .user-actions {
     gap: 6px;
   }

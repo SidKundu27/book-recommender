@@ -28,24 +28,25 @@
 
 /* Small back button in corner */
 .back-button-small {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  border: none;
-  padding: 0.3rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  position: relative;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  padding: 0.6rem 1.2rem;
+  border-radius: 25px;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  z-index: 10;
-  font-weight: 500;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .back-button-small:hover {
-  background: rgba(0, 0, 0, 0.9);
+  background: #667eea;
+  color: white;
   transform: translateY(-1px);
 }
 
@@ -57,7 +58,7 @@
   background: rgba(255, 255, 255, 0.95);
   border-radius: 20px;
   padding: 2.5rem;
-  margin-top: 3rem;
+  margin-top: 1rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(20px);
   color: #333;
@@ -264,8 +265,8 @@
 
 .description-text-main.collapsed {
   display: -webkit-box;
-  -webkit-line-clamp: 6;
-  line-clamp: 6;
+  -webkit-line-clamp: 8; /* Show more lines before truncating */
+  line-clamp: 8;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import './Navigation.css';
 
 const Navigation = ({ 
@@ -8,9 +9,15 @@ const Navigation = ({
   onShowSettings, 
   onShowProfile, 
   onNewSearch,
-  onHome,
-  currentView 
+  onHome
 }) => {
+  const location = useLocation();
+  
+  const isActive = (path) => {
+    if (path === '/home') return location.pathname === '/home' || (location.pathname === '/' && user);
+    if (path === '/search') return location.pathname === '/search' || location.pathname === '/search-results' || (location.pathname === '/' && !user);
+    return location.pathname === path;
+  };
   return (
     <nav className="navigation">
       <div className="nav-container">
@@ -22,7 +29,7 @@ const Navigation = ({
           <div className="nav-links">
             {user && (
               <button 
-                className={`nav-btn ${currentView === 'home' ? 'active' : ''}`} 
+                className={`nav-btn ${isActive('/home') ? 'active' : ''}`} 
                 onClick={onHome} 
                 title="My Library"
               >
@@ -30,7 +37,7 @@ const Navigation = ({
               </button>
             )}
             <button 
-              className={`nav-btn ${currentView === 'advancedSearch' || currentView === 'search' ? 'active' : ''}`} 
+              className={`nav-btn ${isActive('/search') ? 'active' : ''}`} 
               onClick={onNewSearch}
             >
               🔍 Search
@@ -42,14 +49,14 @@ const Navigation = ({
           {user ? (
             <div className="user-menu">
               <button 
-                className={`nav-btn ${currentView === 'profile' ? 'active' : ''}`} 
+                className={`nav-btn ${isActive('/profile') ? 'active' : ''}`} 
                 onClick={onShowProfile} 
                 title="My Books"
               >
                 📚 My Books
               </button>
               <button 
-                className={`nav-btn ${currentView === 'settings' ? 'active' : ''}`} 
+                className={`nav-btn ${isActive('/settings') ? 'active' : ''}`} 
                 onClick={onShowSettings} 
                 title="Settings"
               >

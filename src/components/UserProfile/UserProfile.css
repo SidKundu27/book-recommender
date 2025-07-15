@@ -661,6 +661,7 @@
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .cancel-btn {
@@ -672,6 +673,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .cancel-btn:hover {
@@ -688,6 +690,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .create-btn:hover {
@@ -730,5 +733,10 @@
   
   .modal-header {
     padding: 1.5rem;
+  }
+  
+  .modal-actions {
+    flex-direction: row;
+    justify-content: space-between;
   }
 }

@@ -1,8 +1,8 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import BookDetails from './components/BookDetails'
 import Recommendations from './components/Recommendation';
-import LandingPage from './components/LandingPage';
 import AdvancedSearch from './components/AdvancedSearch';
 import SearchResults from './components/SearchResults';
 import Auth from './components/Auth';
@@ -11,11 +11,12 @@ import UserProfile from './components/UserProfile';
 import Navigation from './components/Navigation';
 import Home from './components/Home';
 
-function App() {
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const [bookDetails, setBookDetails] = useState(null);
-  const [bookTitle, setBookTitle] = useState('');
   const [genre, setGenre] = useState('');
-  const [activeButton, setActiveButton] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('title');
@@ -28,35 +29,25 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [userPreferences, setUserPreferences] = useState({ useML: false });
-  const [navigationHistory, setNavigationHistory] = useState([]);
 
-  const handleFormSubmit = async (event) => {
-    event.preventDefault();
-    setIsSearching(true);
+  // Get current view from URL
+  const getCurrentView = useCallback(() => {
+    const path = location.pathname;
+    if (path === '/') return user ? 'home' : 'advancedSearch';
+    if (path === '/home') return 'home';
+    if (path === '/search') return 'advancedSearch';
+    if (path === '/search-results') return 'searchResults';
+    if (path.startsWith('/book/')) return 'bookDetails';
+    if (path === '/recommendations') return 'recommendations';
+    return 'advancedSearch';
+  }, [location.pathname, user]);
 
-    try {
-      const response = await fetch("/api/findBook", {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ bookTitle: bookTitle }),
-      });
+  const [activeButton, setActiveButton] = useState(getCurrentView());
 
-      if (response.status === 200) {
-        const responseJSON = await response.json();
-        setBookDetails(responseJSON.book);
-        setGenre(responseJSON.genre);
-        setActiveButton('bookDetails');
-        setSearchResults(null); // Clear any previous search results
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  // Update activeButton when route changes
+  useEffect(() => {
+    setActiveButton(getCurrentView());
+  }, [getCurrentView]);
 
   const handleAdvancedSearch = async (searchData) => {
     setIsSearching(true);
@@ -71,19 +62,22 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(searchData),
-      });        if (response.status === 200) {
-          const responseJSON = await response.json();
-          setSearchResults(responseJSON.books);
-          navigateTo('searchResults');
-          setBookDetails(null); // Clear any previous book details
-        } else {
-          setSearchResults([]);
-          navigateTo('searchResults');
-        }      } catch (error) {
-        console.error('Advanced search error:', error);
+      });
+      
+      if (response.status === 200) {
+        const responseJSON = await response.json();
+        setSearchResults(responseJSON.books);
+        navigate('/search-results');
+        setBookDetails(null); // Clear any previous book details
+      } else {
         setSearchResults([]);
-        navigateTo('searchResults');
-      }finally {
+        navigate('/search-results');
+      }
+    } catch (error) {
+      console.error('Advanced search error:', error);
+      setSearchResults([]);
+      navigate('/search-results');
+    } finally {
       setIsSearching(false);
     }
   };
@@ -91,57 +85,55 @@ function App() {
   const handleBookSelect = (book) => {
     setBookDetails(book);
     setGenre(book.categories && book.categories.length > 0 ? book.categories[0] : 'Unknown');
-    navigateTo('bookDetails');
+    navigate(`/book/${book.id}`);
   };
 
   const handleNewSearch = () => {
-    navigateTo('advancedSearch', false); // Don't add to history for new search
+    navigate('/search');
     setSearchResults(null);
     setBookDetails(null);
-    setBookTitle('');
-    setNavigationHistory([]); // Clear history
   };
 
   const handleHomeNavigation = () => {
-    navigateTo('home');
+    navigate('/home');
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch("/api/getBook");
-        let value = "advancedSearch" // Default to advanced search
+        let targetRoute = "/search"; // Default to search
         if (response.status === 200) {
           const data = await response.json();
           setBookDetails(data.book);
-          setBookTitle(data.book.title)
-          setGenre(data.genre)
-          if (data.book){
-            value = "bookDetails"
+          setGenre(data.genre);
+          if (data.book) {
+            targetRoute = `/book/${data.book.id}`;
           }
         }
         
-        // Check if user is logged in and set appropriate default view
+        // Check if user is logged in and set appropriate default route
         const savedUser = localStorage.getItem('user');
-        if (savedUser && value === "advancedSearch") {
-          value = "home"; // Go to home if user is logged in and no specific book
+        if (savedUser && targetRoute === "/search") {
+          targetRoute = "/home"; // Go to home if user is logged in and no specific book
         }
         
-        setActiveButton(value);
+        // Only navigate if we're on the root path
+        if (location.pathname === '/') {
+          navigate(targetRoute);
+        }
       } catch (error) {
-        console.log(error)
-        // If user is logged in, go to home, otherwise advanced search
+        console.log(error);
+        // If user is logged in, go to home, otherwise search
         const savedUser = localStorage.getItem('user');
-        setActiveButton(savedUser ? "home" : "advancedSearch");
+        if (location.pathname === '/') {
+          navigate(savedUser ? "/home" : "/search");
+        }
       }
     };
   
     fetchData();
-  }, [])
-
-  const handleInputChange = (event) => {
-    setBookTitle(event.target.value);
-  };
+  }, [navigate, location.pathname]);
 
   // Authentication functions
   const handleLogin = (userData, token) => {
@@ -203,22 +195,8 @@ function App() {
     }
   }, []);
 
-  // Navigation functions
-  const navigateTo = (view, addToHistory = true) => {
-    if (addToHistory && activeButton !== view) {
-      setNavigationHistory(prev => [...prev, activeButton]);
-    }
-    setActiveButton(view);
-  };
-
   const goBack = () => {
-    if (navigationHistory.length > 0) {
-      const previousView = navigationHistory[navigationHistory.length - 1];
-      setNavigationHistory(prev => prev.slice(0, -1));
-      setActiveButton(previousView);
-    } else {
-      setActiveButton('advancedSearch');
-    }
+    navigate(-1); // Use browser's back functionality
   };
 
   return (
@@ -235,64 +213,75 @@ function App() {
       />
       
       <div className="main-content">
-        {activeButton === "home" &&
-          <Home
-            user={user}
-            onBookSelect={handleBookSelect}
-            onNavigate={navigateTo}
-          />
-        }
-        {activeButton === "home" &&
-          <Home
-            user={user}
-            onBookSelect={handleBookSelect}
-            onNavigate={(view) => {
-              if (view === 'login') setShowAuth(true);
-              else if (view === 'profile') setShowProfile(true);
-              else navigateTo(view);
-            }}
-          />
-        }
-        {activeButton === "newBook" &&
-          <LandingPage
-            bookTitle={bookTitle}
-            handleInputChange={handleInputChange}
-            handleFormSubmit={handleFormSubmit}
-          />
-        }
-        {activeButton === "advancedSearch" &&
-          <AdvancedSearch
-            onSearch={handleAdvancedSearch}
-            isSearching={isSearching}
-          />
-        }
-        {activeButton === "searchResults" &&
-          <SearchResults
-            searchResults={searchResults}
-            searchQuery={searchQuery}
-            searchType={searchType}
-            onBookSelect={handleBookSelect}
-            onNewSearch={handleNewSearch}
-            isLoading={isSearching}
-          />
-        }
-        {activeButton === "bookDetails" &&
-          <BookDetails 
-            bookDetails={bookDetails}
-            setActiveButton={navigateTo}
-            goBack={goBack}
-            user={user}
-            useMLRecommendations={userPreferences.useML}
-          />
-        }
-        {activeButton === "recommendations" &&
-          <Recommendations
-            genre={genre}
-            setActiveButton={navigateTo}
-            user={user}
-            useMLRecommendations={userPreferences.useML}
-          />
-        }
+        <Routes>
+          <Route path="/" element={
+            user ? (
+              <Home
+                user={user}
+                onBookSelect={handleBookSelect}
+                onNavigate={(view) => {
+                  if (view === 'login') setShowAuth(true);
+                  else if (view === 'profile') setShowProfile(true);
+                  else navigate(`/${view}`);
+                }}
+              />
+            ) : (
+              <AdvancedSearch
+                onSearch={handleAdvancedSearch}
+                isSearching={isSearching}
+              />
+            )
+          } />
+          
+          <Route path="/home" element={
+            <Home
+              user={user}
+              onBookSelect={handleBookSelect}
+              onNavigate={(view) => {
+                if (view === 'login') setShowAuth(true);
+                else if (view === 'profile') setShowProfile(true);
+                else navigate(`/${view}`);
+              }}
+            />
+          } />
+          
+          <Route path="/search" element={
+            <AdvancedSearch
+              onSearch={handleAdvancedSearch}
+              isSearching={isSearching}
+            />
+          } />
+          
+          <Route path="/search-results" element={
+            <SearchResults
+              searchResults={searchResults}
+              searchQuery={searchQuery}
+              searchType={searchType}
+              onBookSelect={handleBookSelect}
+              onNewSearch={handleNewSearch}
+              isLoading={isSearching}
+            />
+          } />
+          
+          <Route path="/book/:id" element={
+            <BookDetails 
+              bookDetails={bookDetails}
+              setActiveButton={(view) => navigate(`/${view}`)}
+              goBack={goBack}
+              user={user}
+              useMLRecommendations={userPreferences.useML}
+            />
+          } />
+          
+          <Route path="/recommendations" element={
+            <Recommendations
+              genre={genre}
+              setActiveButton={(view) => navigate(`/${view}`)}
+              user={user}
+              useMLRecommendations={userPreferences.useML}
+            />
+          } />
+        </Routes>
       </div>
 
       {/* Modals */}
@@ -314,6 +303,14 @@ function App() {
         onClose={() => setShowProfile(false)}
       />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 

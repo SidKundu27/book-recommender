@@ -267,7 +267,7 @@ function BookDetails({
                       __html: DOMPurify.sanitize(bookDetails.description)
                     }}
                   />
-                  {bookDetails.description.replace(/<[^>]*>/g, '').length > 300 && (
+                  {bookDetails.description.replace(/<[^>]*>/g, '').length > 400 && (
                     <button 
                       className="read-more-btn-main"
                       onClick={() => setShowFullDescription(!showFullDescription)}

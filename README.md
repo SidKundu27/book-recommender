@@ -4,25 +4,46 @@ The Book Recommendation App is a comprehensive web application that helps users 
 ## Getting Started
 To run this project, you'll need to have Node.js and npm installed on your computer. Follow the steps below to get started:
 
-1. Clone this repository to your local machine
-2. Open a terminal and navigate to the project directory
-3. Run the following command to install the required dependencies:
+### Prerequisites
+- Node.js (version 22 or higher required)
+- npm (version 10 or higher recommended)
 
-`npm install`
+> **Important**: This project uses React 19 and Vite 7, which require Node.js v22+. Please ensure you have the latest Node.js version installed.
 
-4. Start the application by running the following command:
+### Installation & Setup
 
-`npm run start`
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd book-recommender
+   ```
 
-5. In a separate terminal window, navigate to the 'server' folder by running the following command:
+2. **Install dependencies:**
+   ```bash
+   npm run install:all
+   ```
 
-`cd server`
+### Running the Application
 
-6. Run the following command to start the server:
+**Quick Start (Single command):**
+```bash
+npm run dev:all
+```
 
-`npm run dev`
+**Manual Setup (Separate terminals):**
+```bash
+# Terminal 1: Frontend
+npm run dev
 
-7. Open your web browser and go to http://localhost:3000 to view the app.
+# Terminal 2: Backend
+npm run server
+```
+
+**Accessing the Application:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+
+> **Note**: The frontend automatically proxies API calls to the backend server, so you don't need to worry about CORS issues during development.
 
 ## Features
 
@@ -85,6 +106,7 @@ To run this project, you'll need to have Node.js and npm installed on your compu
 
 ### Frontend
 - **React.js**: Modern JavaScript library for building user interfaces
+- **Vite**: Fast build tool and development server with HMR (Hot Module Replacement)
 - **CSS3**: Custom styling with responsive design and modern animations
 - **DOMPurify**: Secure HTML sanitization for book descriptions
 
@@ -99,8 +121,10 @@ To run this project, you'll need to have Node.js and npm installed on your compu
 - **Dog CEO API**: Placeholder images for books without covers (with distinctive styling)
 
 ### Development Tools
-- **npm**: Package management
-- **Nodemon**: Development server with auto-restart functionality
+- **Vite**: Ultra-fast development server with instant HMR
+- **npm**: Package management and script running
+- **Nodemon**: Backend development server with auto-restart functionality
+- **ESBuild**: Fast JavaScript/JSX bundler integrated with Vite
 
 ## API Endpoints
 
@@ -121,7 +145,7 @@ The backend provides several key endpoints:
 
 ```
 book-recommender/
-├── public/                 # Static assets
+├── public/                 # Static assets (favicon, manifest, etc.)
 ├── src/
 │   ├── components/        # React components
 │   │   ├── AdvancedSearch/
@@ -130,22 +154,42 @@ book-recommender/
 │   │   ├── BookForm/      # Book search form
 │   │   ├── Home/          # Dashboard/home page
 │   │   ├── LandingPage/   # Welcome page
+│   │   ├── MenuBar/       # Menu bar component
 │   │   ├── Navigation/    # Navigation bar
 │   │   ├── Recommendation/ # Book recommendations
 │   │   ├── SearchResults/ # Search results display
 │   │   ├── Settings/      # User settings
 │   │   ├── UserProfile/   # User profile and reading lists
 │   │   └── Spinner/       # Loading indicators
-│   ├── App.js             # Main application component
-│   └── index.js           # Application entry point
+│   ├── App.jsx            # Main application component
+│   ├── App.css            # Global application styles
+│   ├── main.jsx           # Application entry point (Vite)
+│   └── index.css          # Base CSS styles
 ├── server/                # Backend Express.js server
 │   ├── modules/          # Server modules
 │   │   ├── mlRecommendations.js
 │   │   ├── readingLists.js
 │   │   └── userManagement.js
-│   └── index.js          # Server entry point
-└── package.json          # Dependencies and scripts
+│   ├── index.js          # Server entry point
+│   └── package.json      # Backend dependencies
+├── build/                # Production build output (Vite)
+├── vite.config.js        # Vite configuration
+├── package.json          # Frontend dependencies and scripts
+└── README.md             # Project documentation
 ```
+
+### Key Configuration Files
+
+- **`vite.config.js`**: Vite configuration with React plugin, proxy setup, and build options
+- **`package.json`**: Frontend dependencies, scripts, and proxy configuration
+- **`server/package.json`**: Backend dependencies and server scripts
+
+### Development Architecture
+
+- **Dual-server setup**: Frontend (Vite) on port 3000, Backend (Express) on port 5000
+- **Proxy configuration**: Vite proxy redirects `/api/*` requests to backend server
+- **Hot Module Replacement**: Instant updates during development with Vite HMR
+- **No routing library**: Navigation handled via state management in `App.jsx`
 
 ## Contributing
 
@@ -154,6 +198,75 @@ book-recommender/
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Build & Deployment
+
+### Production Build
+```bash
+# Build the frontend for production
+npm run build
+
+# The build files will be generated in the 'build' directory
+# You can preview the production build locally:
+npm run preview
+```
+
+### Available Scripts
+
+**Frontend Scripts:**
+- `npm run dev` - Start Vite development server
+- `npm start` - Alias for `npm run dev`
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build locally
+- `npm run dev:all` - Start both frontend and backend servers concurrently
+- `npm run server` - Start only the backend server
+- `npm run install:all` - Install dependencies for both frontend and backend
+
+**Backend Scripts:**
+- `cd server && npm run dev` - Start development server with auto-restart
+- `cd server && npm start` - Start production server
+
+## Troubleshooting
+
+### Common Issues
+
+**Node.js version compatibility:**
+```bash
+# Check your Node.js version
+node --version
+
+# Should be v22.0.0 or higher
+# If not, download and install the latest LTS version from nodejs.org
+```
+
+**Port already in use:**
+```bash
+# If port 3000 or 5000 is occupied, you can:
+# 1. Kill the process using the port
+# 2. Or modify the port in vite.config.js (frontend) or server/index.js (backend)
+```
+
+**Module not found errors:**
+```bash
+# Clear node_modules and reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
+
+# Do the same for the server directory
+cd server
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**API calls failing:**
+- Ensure both frontend and backend servers are running
+- Check that the proxy configuration in `vite.config.js` is correct
+- Verify the backend server is running on port 5000
+
+**Vite configuration issues:**
+- Check `vite.config.js` for correct plugin configuration
+- Ensure JSX files have the correct extensions (.jsx)
+- Clear Vite cache: `rm -rf node_modules/.vite`
 
 ## License
 

@@ -11,6 +11,11 @@ server/node_modules
 
 # production
 /build
+/dist
+
+# Vite
+.vite
+node_modules/.vite
 
 # misc
 .DS_Store

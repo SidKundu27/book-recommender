@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 
-const Settings = ({ user, isOpen, onClose }) => {
+const Settings = ({ user, isOpen, onClose, onPreferencesChange }) => {
   const [preferences, setPreferences] = useState({
     useML: false,
     favoriteGenres: [],
@@ -56,6 +56,11 @@ const Settings = ({ user, isOpen, onClose }) => {
         setPreferences(prev => ({ ...prev, useML }));
         setMessage(useML ? 'ML recommendations enabled!' : 'Google recommendations enabled!');
         setTimeout(() => setMessage(''), 3000);
+        
+        // Notify parent component to refresh preferences
+        if (onPreferencesChange) {
+          onPreferencesChange();
+        }
       }
     } catch (error) {
       console.error('Error updating ML preference:', error);

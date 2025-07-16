@@ -554,13 +554,26 @@ class BasicMLRecommendationEngine {
 
   // Enhanced book data processing
   enhanceBookData(book) {
-    return {
+    const enhanced = {
+      id: book.id || `book_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: book.title || 'Unknown Title',
+      authors: book.authors || ['Unknown Author'],
+      description: book.description || '',
+      categories: book.categories || [],
+      publishedDate: book.publishedDate || '',
+      pageCount: book.pageCount || 0,
+      averageRating: book.averageRating || 0,
+      ratingsCount: book.ratingsCount || 0,
+      imageLinks: book.imageLinks || {},
+      language: book.language || 'en',
       ...book,
       popularityScore: (book.ratingsCount || 0) * (book.averageRating || 0),
       ageCategory: this.categorizeByAge(book.publishedDate),
       wordCount: this.estimateWordCount(book.pageCount),
       complexityScore: this.calculateComplexityScore(book)
     };
+    
+    return enhanced;
   }
 
   categorizeByAge(publishedDate) {

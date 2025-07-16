@@ -168,6 +168,7 @@ function AppContent() {
       const response = await fetch(`http://localhost:5000/api/recommendation-settings/${userId}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('🎯 User preferences loaded:', data);
         setUserPreferences(data);
       }
     } catch (error) {
@@ -279,6 +280,7 @@ function AppContent() {
               setActiveButton={(view) => navigate(`/${view}`)}
               user={user}
               useMLRecommendations={userPreferences.useML}
+              onBookSelect={handleBookSelect}
             />
           } />
         </Routes>
@@ -295,6 +297,7 @@ function AppContent() {
         user={user}
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+        onPreferencesChange={() => user && fetchUserPreferences(user.id)}
       />
       
       <UserProfile

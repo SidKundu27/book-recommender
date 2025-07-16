@@ -254,33 +254,63 @@ const UserProfile = ({ user, isOpen, onClose }) => {
               ) : (
                 <div className="books-grid">
                   {favorites.map(book => (
-                    <div key={book.id} className="book-card">
-                      <div className="book-cover">
-                        {book.imageLinks?.thumbnail ? (
-                          <img src={book.imageLinks.thumbnail} alt={book.title} />
-                        ) : (
-                          <div className="no-cover">{book.title?.[0] || '?'}</div>
+                    <div key={book.id} className="modern-profile-card">
+                      <div className="profile-card-cover-section">
+                        <div className="profile-card-cover-wrapper">
+                          {book.imageLinks?.thumbnail ? (
+                            <img src={book.imageLinks.thumbnail} alt={book.title} className="profile-card-cover" />
+                          ) : (
+                            <div className="profile-no-cover">{book.title?.[0] || '?'}</div>
+                          )}
+                          <div className="profile-card-overlay">
+                            <div className="profile-overlay-content">
+                              <span className="profile-view-text">📖 View</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {book.averageRating && (
+                          <div className="profile-rating-badge">
+                            <span className="profile-rating-star">★</span>
+                            <span className="profile-rating-value">{book.averageRating.toFixed(1)}</span>
+                          </div>
                         )}
                       </div>
-                      <div className="book-info">
-                        <h4>{book.title}</h4>
-                        <p>{book.authors?.join(', ') || 'Unknown Author'}</p>
-                        <div className="book-meta">
-                          {book.averageRating && (
-                            <span className="rating">⭐ {book.averageRating}</span>
-                          )}
+                      
+                      <div className="profile-card-content">
+                        <div className="profile-card-header">
+                          <h4 className="profile-card-title">{book.title}</h4>
+                        </div>
+                        
+                        <p className="profile-card-authors">
+                          <span className="profile-author-label">by</span>
+                          <span className="profile-author-names">{book.authors?.join(', ') || 'Unknown Author'}</span>
+                        </p>
+                        
+                        <div className="profile-card-metadata">
                           {book.publishedDate && (
-                            <span className="year">{new Date(book.publishedDate).getFullYear()}</span>
+                            <div className="profile-metadata-item">
+                              <span className="profile-metadata-icon">📅</span>
+                              <span className="profile-metadata-text">{new Date(book.publishedDate).getFullYear()}</span>
+                            </div>
+                          )}
+                          
+                          {book.averageRating && (
+                            <div className="profile-metadata-item">
+                              <span className="profile-metadata-icon">⭐</span>
+                              <span className="profile-metadata-text">{book.averageRating}</span>
+                            </div>
                           )}
                         </div>
+                        
+                        <button 
+                          className="profile-remove-btn"
+                          onClick={() => removeFromFavorites(book.id)}
+                          title="Remove from favorites"
+                        >
+                          <span>❌ Remove</span>
+                        </button>
                       </div>
-                      <button 
-                        className="remove-btn"
-                        onClick={() => removeFromFavorites(book.id)}
-                        title="Remove from favorites"
-                      >
-                        ×
-                      </button>
                     </div>
                   ))}
                 </div>

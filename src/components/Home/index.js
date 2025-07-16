@@ -92,39 +92,72 @@ function Home({ user, onBookSelect, onNavigate }) {
   const renderBookCard = (book, showListName = false) => (
     <div 
       key={book.id} 
-      className="book-card"
+      className="modern-home-card"
       onClick={() => handleBookClick(book)}
     >
-      <div className="book-cover-container">
-        <img 
-          src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
-          alt={book.title}
-          className="book-cover"
-          onError={(e) => {
-            if (e.target.src !== defaultImage) {
-              e.target.src = defaultImage;
-            }
-          }}
-        />
-        <div className="book-overlay">
-          <span>View Details</span>
+      <div className="home-card-cover-section">
+        <div className="home-card-cover-wrapper">
+          <img 
+            src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
+            alt={book.title}
+            className="home-card-cover"
+            onError={(e) => {
+              if (e.target.src !== defaultImage) {
+                e.target.src = defaultImage;
+              }
+            }}
+          />
+          <div className="home-card-overlay">
+            <div className="home-overlay-content">
+              <span className="home-view-text">📖 View Details</span>
+            </div>
+          </div>
         </div>
+        
+        {book.averageRating && (
+          <div className="home-rating-badge">
+            <span className="home-rating-star">★</span>
+            <span className="home-rating-value">{book.averageRating.toFixed(1)}</span>
+          </div>
+        )}
+        
+        {showListName && book.listName && (
+          <div className="home-list-badge">
+            <span>📚 {book.listName}</span>
+          </div>
+        )}
       </div>
       
-      <div className="book-info">
-        <h3 className="book-title">{book.title}</h3>
+      <div className="home-card-content">
+        <div className="home-card-header">
+          <h3 className="home-card-title">{book.title}</h3>
+        </div>
+        
         {book.authors && (
-          <p className="book-author">
-            by {book.authors.slice(0, 2).join(', ')}
-            {book.authors.length > 2 && '...'}
+          <p className="home-card-authors">
+            <span className="home-author-label">by</span>
+            <span className="home-author-names">
+              {book.authors.slice(0, 2).join(', ')}
+              {book.authors.length > 2 && '...'}
+            </span>
           </p>
         )}
-        {showListName && book.listName && (
-          <p className="book-list">In: {book.listName}</p>
-        )}
-        {book.publishedDate && (
-          <p className="book-year">{book.publishedDate.split('-')[0]}</p>
-        )}
+        
+        <div className="home-card-metadata">
+          {book.publishedDate && (
+            <div className="home-metadata-item">
+              <span className="home-metadata-icon">📅</span>
+              <span className="home-metadata-text">{book.publishedDate.split('-')[0]}</span>
+            </div>
+          )}
+          
+          {book.pageCount && (
+            <div className="home-metadata-item">
+              <span className="home-metadata-icon">📄</span>
+              <span className="home-metadata-text">{book.pageCount}p</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -238,22 +238,28 @@ app.post("/api/findBook", (req, res) => {
 })
 
 // Enhanced recommendations with mode selection (Google vs ML)
-app.get('/api/getBookRecommendation', (req, res) => {
+app.get('/api/getBookRecommendation', async (req, res) => {
 	const useML = req.query.useML === 'true';
 	const userId = req.query.userId;
+	
+	console.log('🔍 Recommendation request:', { useML, userId, hasUser: !!userProfiles[userId] });
 	
 	if (useML && userId && userProfiles[userId]) {
 		// Use ML-based recommendations
 		try {
-			const mlRecommendations = mlEngine.getRecommendations(userId, 6);
+			console.log('🤖 Attempting ML recommendations...');
+			const mlRecommendations = await mlEngine.getMLRecommendations(userId, null, 6);
+			console.log('✅ ML recommendations generated:', mlRecommendations.length);
 			res.status(200).send(mlRecommendations);
 		} catch (error) {
-			console.error('ML recommendations error:', error);
+			console.error('❌ ML recommendations error:', error);
 			// Fallback to Google-based recommendations
+			console.log('🔄 Falling back to Google recommendations');
 			getGoogleBasedRecommendations(res);
 		}
 	} else {
 		// Use Google-based recommendations (original logic)
+		console.log('📚 Using Google-based recommendations');
 		getGoogleBasedRecommendations(res);
 	}
 });
@@ -563,7 +569,31 @@ app.get('/api/debug/user/:userId', (req, res) => {
 		username: profile.username,
 		favoriteBooks: profile.favoriteBooks.length,
 		readingLists: profile.readingLists.length,
-		lastLogin: profile.lastLogin
+		lastLogin: profile.lastLogin,
+		mlEnabled: profile.recommendations?.useML || false
+	});
+});
+
+// Test endpoint to enable ML for a user
+app.post('/api/debug/enable-ml/:userId', (req, res) => {
+	const userId = req.params.userId;
+	const profile = userProfiles[userId];
+	
+	if (!profile) {
+		return res.status(404).json({ error: 'User profile not found' });
+	}
+	
+	if (!profile.recommendations) {
+		profile.recommendations = {};
+	}
+	
+	profile.recommendations.useML = true;
+	profile.recommendations.lastUpdated = new Date();
+	
+	res.json({
+		message: 'ML enabled for user',
+		userId: userId,
+		mlEnabled: true
 	});
 });
 

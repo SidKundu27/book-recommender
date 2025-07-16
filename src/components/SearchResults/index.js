@@ -183,79 +183,101 @@ function SearchResults({
             {sortedResults.map((book, index) => (
               <div 
                 key={book.id || index} 
-                className="result-card"
+                className="modern-book-card"
                 onClick={() => onBookSelect(book)}
               >
                 <div className="book-cover-section">
-                  <img 
-                    src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
-                    alt={book.title}
-                    className="result-book-cover"
-                    onError={(e) => {
-                      if (e.target.src !== defaultImage) {
-                        e.target.src = defaultImage;
-                      }
-                    }}
-                  />
+                  <div className="book-cover-wrapper">
+                    <img 
+                      src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
+                      alt={book.title}
+                      className="book-cover"
+                      onError={(e) => {
+                        if (e.target.src !== defaultImage) {
+                          e.target.src = defaultImage;
+                        }
+                      }}
+                    />
+                    <div className="book-overlay">
+                      <div className="overlay-content">
+                        <span className="view-text">📖 View Details</span>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {book.averageRating && (
                     <div className="rating-badge">
-                      ⭐ {book.averageRating.toFixed(1)}
+                      <span className="rating-star">★</span>
+                      <span className="rating-value">{book.averageRating.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="book-info-section">
-                  <h3 className="result-book-title">{book.title}</h3>
-                  
-                  {book.subtitle && (
-                    <p className="result-book-subtitle">{book.subtitle}</p>
-                  )}
+                <div className="book-content">
+                  <div className="book-header">
+                    <h3 className="book-title">{book.title}</h3>
+                    {book.subtitle && (
+                      <p className="book-subtitle">{book.subtitle}</p>
+                    )}
+                  </div>
                   
                   {book.authors && (
-                    <p className="result-book-author">
-                      by {book.authors.slice(0, 2).join(', ')}
-                      {book.authors.length > 2 && ` +${book.authors.length - 2} more`}
+                    <p className="book-authors">
+                      <span className="author-label">by</span>
+                      <span className="author-names">
+                        {book.authors.slice(0, 2).join(', ')}
+                        {book.authors.length > 2 && ` +${book.authors.length - 2} more`}
+                      </span>
                     </p>
                   )}
                   
                   <div className="book-metadata">
                     {book.publishedDate && (
-                      <span className="metadata-item">
-                        📅 {book.publishedDate.split('-')[0]}
-                      </span>
+                      <div className="metadata-item">
+                        <span className="metadata-icon">📅</span>
+                        <span className="metadata-text">{book.publishedDate.split('-')[0]}</span>
+                      </div>
                     )}
                     
                     {book.pageCount && (
-                      <span className="metadata-item">
-                        📄 {book.pageCount} pages
-                      </span>
+                      <div className="metadata-item">
+                        <span className="metadata-icon">📄</span>
+                        <span className="metadata-text">{book.pageCount} pages</span>
+                      </div>
                     )}
                     
-                    {book.categories && (
-                      <span className="metadata-item">
-                        🏷️ {book.categories[0]}
-                      </span>
+                    {book.categories && book.categories[0] && (
+                      <div className="metadata-item">
+                        <span className="metadata-icon">🏷️</span>
+                        <span className="metadata-text">{book.categories[0]}</span>
+                      </div>
                     )}
                   </div>
                   
                   {book.averageRating && (
                     <div className="rating-section">
-                      {renderStars(book.averageRating)}
-                      <span className="rating-text">
+                      <div className="stars-rating">
+                        {renderStars(book.averageRating)}
+                      </div>
+                      <span className="rating-count">
                         ({book.ratingsCount || 0} reviews)
                       </span>
                     </div>
                   )}
                   
                   {book.description && (
-                    <p className="result-description">
-                      {book.description.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                    <p className="book-description">
+                      {book.description.replace(/<[^>]*>/g, '').substring(0, 120)}
+                      {book.description.length > 120 && '...'}
                     </p>
                   )}
                   
-                  <button className="view-details-btn">
-                    View Details →
-                  </button>
+                  <div className="card-footer">
+                    <button className="view-details-btn">
+                      <span>View Details</span>
+                      <span className="btn-arrow">→</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

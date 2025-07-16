@@ -41,17 +41,23 @@ function Recommendations({
         if (useMLRecommendations && user) {
           params.append('useML', 'true');
           params.append('userId', user.id);
+          console.log('🤖 Using ML recommendations for user:', user.id);
+        } else {
+          console.log('🔍 Using Google recommendations');
         }
         
         const url = `/api/getBookRecommendation${params.toString() ? '?' + params.toString() : ''}`;
+        console.log('📞 API call:', url);
+        
         const response = await fetch(url);
         
         if (response.status === 200) {
           const data = await response.json();
+          console.log('📚 Received recommendations:', data.length, 'books');
           setRecommendations(data);
         }
       } catch (error) {
-        console.log(error)
+        console.log('❌ Recommendations error:', error)
       }
       setIsLoading(false);
     };
@@ -185,6 +191,15 @@ function Recommendations({
                 <span className="google-mode">🔍 Google Books Recommendations</span>
               )}
             </div>
+            
+            {/* Debug info */}
+            {user && (
+              <div className="debug-info" style={{background: 'rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '8px', marginTop: '1rem', fontSize: '0.9rem'}}>
+                <p>Debug: User ID: {user.id}</p>
+                <p>Debug: ML Mode: {useMLRecommendations ? 'ON' : 'OFF'}</p>
+                <p>Debug: Recommendations Count: {recommendations.length}</p>
+              </div>
+            )}
           </div>
           {genre && (
             <p className="genre-subtitle">
@@ -198,78 +213,149 @@ function Recommendations({
           {recommendations.map((book, index) => (
             <div
               key={book.id || index}
-              className={`book-card ${selectedBook?.id === book.id ? 'active' : ''}`}
+              className="modern-book-card"
             >
-              <div className="book-cover-container">
-                <img 
-                  src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
-                  alt={book.title}
-                  className="book-cover"
-                  onError={(e) => {
-                    if (e.target.src !== defaultImage) {
-                      e.target.src = defaultImage;
-                    }
-                  }}
-                />
-                <div className="book-overlay">
-                  <span>View Details</span>
+              <div className="book-cover-section">
+                <div className="book-cover-wrapper">
+                  <img 
+                    src={book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail || defaultImage} 
+                    alt={book.title}
+                    className="book-cover"
+                    onError={(e) => {
+                      if (e.target.src !== defaultImage) {
+                        e.target.src = defaultImage;
+                      }
+                    }}
+                  />
+                  <div className="book-overlay">
+                    <div className="overlay-content">
+                      <span className="view-text">📖 Quick Preview</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="book-info">
-                <h3 className="book-title">{book.title}</h3>
-                {book.authors && (
-                  <p className="book-author">
-                    {book.authors.slice(0, 2).join(', ')}
-                    {book.authors.length > 2 && '...'}
-                  </p>
+                
+                {book.averageRating && (
+                  <div className="rating-badge">
+                    <span className="rating-star">★</span>
+                    <span className="rating-value">{book.averageRating.toFixed(1)}</span>
+                  </div>
                 )}
-                {book.publishedDate && (
-                  <p className="book-year">{book.publishedDate.split('-')[0]}</p>
+                
+                {book.mlGenerated && (
+                  <div className="ml-badge">
+                    <span>🤖 AI Pick</span>
+                  </div>
                 )}
               </div>
               
-              {/* Action buttons */}
-              <div className="book-actions">
-                <button 
-                  className="action-btn details-btn"
-                  onClick={() => handleBookClick(book)}
-                >
-                  📖 Details
-                </button>
+              <div className="book-content">
+                <div className="book-header">
+                  <h3 className="book-title">{book.title}</h3>
+                  {book.subtitle && (
+                    <p className="book-subtitle">{book.subtitle}</p>
+                  )}
+                </div>
                 
-                {user && (
-                  <>
-                    <button 
-                      className="action-btn favorite-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToFavorites(book);
-                      }}
-                    >
-                      ❤️ Favorite
-                    </button>
-                    
-                    <button 
-                      className="action-btn list-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToList(book);
-                      }}
-                    >
-                      📚 Add to List
-                    </button>
-                  </>
+                {book.authors && (
+                  <p className="book-authors">
+                    <span className="author-label">by</span>
+                    <span className="author-names">
+                      {book.authors.slice(0, 2).join(', ')}
+                      {book.authors.length > 2 && '...'}
+                    </span>
+                  </p>
                 )}
                 
-                <button 
-                  className="action-btn view-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewFullDetails(book);
-                  }}
-                >
-                  🔍 View Full
-                </button>
+                <div className="book-metadata">
+                  {book.publishedDate && (
+                    <div className="metadata-item">
+                      <span className="metadata-icon">📅</span>
+                      <span className="metadata-text">{book.publishedDate.split('-')[0]}</span>
+                    </div>
+                  )}
+                  
+                  {book.pageCount && (
+                    <div className="metadata-item">
+                      <span className="metadata-icon">📄</span>
+                      <span className="metadata-text">{book.pageCount} pages</span>
+                    </div>
+                  )}
+                  
+                  {book.categories && book.categories[0] && (
+                    <div className="metadata-item">
+                      <span className="metadata-icon">🏷️</span>
+                      <span className="metadata-text">{book.categories[0]}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {book.recommendationReasons && book.recommendationReasons.length > 0 && (
+                  <div className="recommendation-reasons">
+                    <p className="reasons-title">Why recommended:</p>
+                    <ul className="reasons-list">
+                      {book.recommendationReasons.slice(0, 2).map((reason, idx) => (
+                        <li key={idx} className="reason-item">{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {book.description && (
+                  <p className="book-description">
+                    {book.description.replace(/<[^>]*>/g, '').substring(0, 100)}
+                    {book.description.length > 100 && '...'}
+                  </p>
+                )}
+                
+                <div className="card-actions">
+                  <button 
+                    className="action-btn primary-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBookClick(book);
+                    }}
+                  >
+                    <span className="btn-icon">📖</span>
+                    <span>Quick View</span>
+                  </button>
+                  
+                  {user && (
+                    <>
+                      <button 
+                        className="action-btn secondary-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToFavorites(book);
+                        }}
+                      >
+                        <span className="btn-icon">❤️</span>
+                        <span>Favorite</span>
+                      </button>
+                      
+                      <button 
+                        className="action-btn secondary-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToList(book);
+                        }}
+                      >
+                        <span className="btn-icon">📚</span>
+                        <span>Add to List</span>
+                      </button>
+                    </>
+                  )}
+                  
+                  <button 
+                    className="action-btn accent-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewFullDetails(book);
+                    }}
+                  >
+                    <span className="btn-icon">🔍</span>
+                    <span>Full Details</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}

@@ -6,8 +6,10 @@ import './Recommendation.css'
 function Recommendations({
   genre,
   setActiveButton,
+  goBack,
   user,
-  useMLRecommendations = false
+  useMLRecommendations = false,
+  onBookSelect
 }) {
   const [isloading, setIsLoading] = useState(true);
   const [recommendations, setRecommendations] = useState([]);
@@ -65,6 +67,93 @@ function Recommendations({
     setSelectedBook(null);
   };
 
+  const handleAddToFavorites = async (book) => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/reading-lists/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ book })
+      });
+      
+      if (response.ok) {
+        alert('Book added to favorites!');
+      } else {
+        const errorData = await response.json();
+        if (errorData.error === 'Book already in favorites') {
+          alert('This book is already in your favorites!');
+        } else {
+          alert('Error adding to favorites: ' + errorData.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      alert('Error adding to favorites');
+    }
+  };
+
+  const handleAddToList = async (book) => {
+    if (!user) return;
+    
+    // For now, we'll show a simple prompt. In the future, this could open a list selection modal
+    const listName = prompt('Enter list name or leave blank to add to "Want to Read" list:');
+    const targetList = listName?.trim() || 'Want to Read';
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      // First, get user's lists to find the target list
+      const listsResponse = await fetch('http://localhost:5000/api/reading-lists', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (listsResponse.ok) {
+        const listsData = await listsResponse.json();
+        const targetListObj = listsData.lists.find(list => 
+          list.name.toLowerCase() === targetList.toLowerCase()
+        );
+        
+        if (targetListObj) {
+          const response = await fetch(`http://localhost:5000/api/reading-lists/${targetListObj.id}/books`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ book })
+          });
+          
+          if (response.ok) {
+            alert(`Book added to "${targetListObj.name}" list!`);
+          } else {
+            const errorData = await response.json();
+            alert('Error adding to list: ' + errorData.error);
+          }
+        } else {
+          alert(`List "${targetList}" not found. Please check the list name.`);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding to list:', error);
+      alert('Error adding to list');
+    }
+  };
+
+  const handleViewFullDetails = (book) => {
+    if (onBookSelect) {
+      onBookSelect(book);
+      setActiveButton('bookDetails');
+    } else {
+      // Fallback - open modal
+      handleBookClick(book);
+    }
+  };
+
   if (isloading) {
     return (
       <div className="recommendations-page">
@@ -81,9 +170,9 @@ function Recommendations({
       <div className="recommendations-container">
         <button 
           className="back-button"
-          onClick={() => setActiveButton('bookDetails')}
+          onClick={() => goBack ? goBack() : setActiveButton('home')}
         >
-          ← Back to Book Details
+          ← Back
         </button>
         
         <div className="recommendations-header">
@@ -110,7 +199,6 @@ function Recommendations({
             <div
               key={book.id || index}
               className={`book-card ${selectedBook?.id === book.id ? 'active' : ''}`}
-              onClick={() => handleBookClick(book)}
             >
               <div className="book-cover-container">
                 <img 
@@ -138,6 +226,50 @@ function Recommendations({
                 {book.publishedDate && (
                   <p className="book-year">{book.publishedDate.split('-')[0]}</p>
                 )}
+              </div>
+              
+              {/* Action buttons */}
+              <div className="book-actions">
+                <button 
+                  className="action-btn details-btn"
+                  onClick={() => handleBookClick(book)}
+                >
+                  📖 Details
+                </button>
+                
+                {user && (
+                  <>
+                    <button 
+                      className="action-btn favorite-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToFavorites(book);
+                      }}
+                    >
+                      ❤️ Favorite
+                    </button>
+                    
+                    <button 
+                      className="action-btn list-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToList(book);
+                      }}
+                    >
+                      📚 Add to List
+                    </button>
+                  </>
+                )}
+                
+                <button 
+                  className="action-btn view-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewFullDetails(book);
+                  }}
+                >
+                  🔍 View Full
+                </button>
               </div>
             </div>
           ))}

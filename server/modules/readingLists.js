@@ -43,14 +43,14 @@ router.post('/favorites', (req, res) => {
   res.json({ message: 'Book added to favorites', favorites: profile.favoriteBooks });
 });
 
-// Remove book from favorites
-router.delete('/favorites/:bookId', (req, res) => {
+// Remove book from favorites  
+router.delete('/favorites', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
   }
   
-  const { bookId } = req.params;
+  const { bookId } = req.body;
   
   const initialLength = profile.favoriteBooks.length;
   profile.favoriteBooks = profile.favoriteBooks.filter(book => book.id !== bookId);
@@ -63,23 +63,23 @@ router.delete('/favorites/:bookId', (req, res) => {
 });
 
 // Get user's reading lists
-router.get('/lists', (req, res) => {
+router.get('/', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
   }
   
-  res.json(profile.readingLists);
+  res.json({ lists: profile.readingLists });
 });
 
 // Create new reading list
-router.post('/lists', (req, res) => {
+router.post('/', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
   }
   
-  const { name, description } = req.body;
+  const { name, description, type } = req.body;
   
   if (!name) {
     return res.status(400).json({ error: 'List name is required' });
@@ -95,6 +95,7 @@ router.post('/lists', (req, res) => {
     id: generateListId(),
     name,
     description: description || '',
+    type: type || 'custom',
     books: [],
     createdAt: new Date(),
     updatedAt: new Date()
@@ -106,7 +107,7 @@ router.post('/lists', (req, res) => {
 });
 
 // Update reading list
-router.patch('/lists/:listId', (req, res) => {
+router.patch('/:listId', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
@@ -128,7 +129,7 @@ router.patch('/lists/:listId', (req, res) => {
 });
 
 // Delete reading list
-router.delete('/lists/:listId', (req, res) => {
+router.delete('/:listId', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
@@ -152,7 +153,7 @@ router.delete('/lists/:listId', (req, res) => {
 });
 
 // Add book to reading list
-router.post('/lists/:listId/books', (req, res) => {
+router.post('/:listId/books', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
@@ -184,7 +185,7 @@ router.post('/lists/:listId/books', (req, res) => {
 });
 
 // Remove book from reading list
-router.delete('/lists/:listId/books/:bookId', (req, res) => {
+router.delete('/:listId/books/:bookId', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });
@@ -210,7 +211,7 @@ router.delete('/lists/:listId/books/:bookId', (req, res) => {
 });
 
 // Update book status in reading list
-router.patch('/lists/:listId/books/:bookId', (req, res) => {
+router.patch('/:listId/books/:bookId', (req, res) => {
   const profile = userProfiles[req.user.id];
   if (!profile) {
     return res.status(404).json({ error: 'Profile not found' });

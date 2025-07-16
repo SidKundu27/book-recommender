@@ -42,7 +42,11 @@ function Home({ user, onBookSelect, onNavigate }) {
       
       if (favoritesResponse.ok) {
         const favoritesData = await favoritesResponse.json();
-        setFavorites(favoritesData.books || []);
+        console.log('Favorites data received:', favoritesData);
+        setFavorites(Array.isArray(favoritesData) ? favoritesData : []);
+      } else {
+        console.error('Failed to fetch favorites');
+        setFavorites([]);
       }
       
       // Fetch reading lists
@@ -52,7 +56,11 @@ function Home({ user, onBookSelect, onNavigate }) {
       
       if (listsResponse.ok) {
         const listsData = await listsResponse.json();
+        console.log('Reading lists data received:', listsData);
         setReadingLists(listsData.lists || []);
+      } else {
+        console.error('Failed to fetch reading lists');
+        setReadingLists([]);
       }
       
     } catch (error) {
@@ -192,7 +200,7 @@ function Home({ user, onBookSelect, onNavigate }) {
                   <p>Start adding books to your favorites to see them here!</p>
                   <button 
                     className="search-btn"
-                    onClick={() => onNavigate('advancedSearch')}
+                    onClick={() => onNavigate('search')}
                   >
                     Find Books
                   </button>
@@ -265,7 +273,7 @@ function Home({ user, onBookSelect, onNavigate }) {
                   <p>Start building your personal library by adding books to favorites or reading lists!</p>
                   <button 
                     className="search-btn"
-                    onClick={() => onNavigate('advancedSearch')}
+                    onClick={() => onNavigate('search')}
                   >
                     Discover Books
                   </button>

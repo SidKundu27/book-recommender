@@ -393,7 +393,166 @@ class BasicMLRecommendationEngine {
     return reasons;
   }
 
-  // Enhanced book data (same as in main server)
+  // Calculate diversity bonus to encourage exploration
+  calculateDiversityBonus(book, profile) {
+    let diversityBonus = 0;
+    
+    // Bonus for exploring new genres
+    const userGenres = new Set();
+    profile.favoriteBooks.forEach(book => {
+      if (book.categories) {
+        book.categories.forEach(genre => userGenres.add(genre));
+      }
+    });
+    
+    if (book.categories) {
+      const newGenres = book.categories.filter(genre => !userGenres.has(genre));
+      diversityBonus += newGenres.length * 0.1;
+    }
+    
+    // Bonus for exploring new authors
+    const userAuthors = new Set();
+    profile.favoriteBooks.forEach(book => {
+      if (book.authors) {
+        book.authors.forEach(author => userAuthors.add(author));
+      }
+    });
+    
+    if (book.authors) {
+      const newAuthors = book.authors.filter(author => !userAuthors.has(author));
+      diversityBonus += newAuthors.length * 0.05;
+    }
+    
+    return Math.min(diversityBonus, 0.3); // Cap diversity bonus
+  }
+
+  // Calculate popularity bonus
+  calculatePopularityBonus(book) {
+    const ratingsCount = book.ratingsCount || 0;
+    const averageRating = book.averageRating || 0;
+    const popularityScore = Math.log(1 + ratingsCount) * averageRating;
+    return Math.min(popularityScore / 100, 0.2); // Normalize and cap
+  }
+
+  // Update recommendation history for learning
+  updateRecommendationHistory(userId, recommendations) {
+    const profile = userProfiles[userId];
+    if (!profile.recommendationHistory) {
+      profile.recommendationHistory = [];
+    }
+    
+    const historyEntry = {
+      timestamp: new Date(),
+      recommendations: recommendations.map(book => ({
+        id: book.id,
+        title: book.title,
+        score: book.recommendationScore,
+        reason: book.recommendationReason
+      }))
+    };
+    
+    profile.recommendationHistory.push(historyEntry);
+    
+    // Keep only last 10 recommendation sessions
+    if (profile.recommendationHistory.length > 10) {
+      profile.recommendationHistory = profile.recommendationHistory.slice(-10);
+    }
+  }
+
+  // Get enhanced personalized recommendations
+  async getEnhancedRecommendations(userId, options = {}) {
+    const {
+      count = 10,
+      genre = null,
+      excludeRead = true,
+      diversify = true,
+      includePopular = true,
+      sourceBook = null // For "more like this" recommendations
+    } = options;
+
+    try {
+      const profile = userProfiles[userId];
+      const userSettings = profile.recommendations || {};
+      
+      // Check if ML is enabled for this user
+      if (!userSettings.useML) {
+        return await this.getFallbackRecommendations(count, genre);
+      }
+
+      let userVector = this.createUserVector(userId);
+      
+      // If we have a source book, bias the vector towards it
+      if (sourceBook) {
+        userVector = this.createBiasedUserVector(userId, sourceBook);
+      }
+
+      if (!userVector) {
+        return await this.getFallbackRecommendations(count, genre);
+      }
+
+      // Get more candidates for better filtering
+      const candidates = await this.getCandidateBooks(userVector, genre, count * 4);
+      
+      // Score each candidate book with enhanced metrics
+      const scoredBooks = candidates.map(book => {
+        const bookVector = this.createBookVector(book);
+        const similarity = this.calculateSimilarity(userVector, bookVector);
+        const diversityBonus = diversify ? this.calculateDiversityBonus(book, profile) : 0;
+        const popularityBonus = includePopular ? this.calculatePopularityBonus(book) : 0;
+        const recencyBonus = this.calculateRecencyBonus(book, profile);
+        
+        const totalScore = similarity + diversityBonus + popularityBonus + recencyBonus;
+        
+        return {
+          book,
+          score: totalScore,
+          similarity,
+          explanation: this.generateDetailedExplanation(userVector, bookVector, {
+            similarity,
+            diversityBonus,
+            popularityBonus,
+            recencyBonus
+          })
+        };
+      });
+
+      // Filter out already read books
+      let filteredBooks = scoredBooks;
+      if (excludeRead) {
+        const readBookIds = new Set();
+        profile.favoriteBooks.forEach(book => readBookIds.add(book.id));
+        profile.readingLists.forEach(list => {
+          list.books.forEach(book => readBookIds.add(book.id));
+        });
+        
+        filteredBooks = scoredBooks.filter(item => !readBookIds.has(item.book.id));
+      }
+
+      // Sort by score and return top recommendations
+      const recommendations = filteredBooks
+        .sort((a, b) => b.score - a.score)
+        .slice(0, count)
+        .map(item => ({
+          ...item.book,
+          recommendationScore: item.score,
+          recommendationReason: item.explanation,
+          mlGenerated: true
+        }));
+
+      // Update user's recommendation history for learning
+      this.updateRecommendationHistory(userId, recommendations);
+      
+      // Update user preferences based on this interaction
+      this.updateUserPreferences(userId, recommendations);
+
+      return recommendations;
+    } catch (error) {
+      console.error('Error generating enhanced recommendations:', error);
+      return await this.getFallbackRecommendations(count, genre);
+    }
+  }
+
+  // Enhanced book data processing
   enhanceBookData(book) {
     return {
       ...book,
@@ -472,8 +631,142 @@ class BasicMLRecommendationEngine {
         userVector.authors[author] = (userVector.authors[author] || 0) + (0.1 * weight);
       });
     }
+  }
 
-    this.userVectors.set(userId, userVector);
+  // Calculate recency bonus based on user preferences
+  calculateRecencyBonus(book, profile) {
+    if (!book.publishedDate) return 0;
+    
+    const bookYear = new Date(book.publishedDate).getFullYear();
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - bookYear;
+    
+    // Check user's reading history for recency preference
+    const userBooks = profile.favoriteBooks || [];
+    if (userBooks.length === 0) return 0;
+    
+    const avgUserBookAge = userBooks.reduce((sum, userBook) => {
+      if (userBook.publishedDate) {
+        const userBookYear = new Date(userBook.publishedDate).getFullYear();
+        return sum + (currentYear - userBookYear);
+      }
+      return sum;
+    }, 0) / userBooks.length;
+    
+    // Bonus for books that match user's typical recency preference
+    const ageDiff = Math.abs(age - avgUserBookAge);
+    return Math.max(0, 0.1 - (ageDiff / 100));
+  }
+
+  // Create biased user vector for "more like this" recommendations
+  createBiasedUserVector(userId, sourceBook) {
+    const baseVector = this.createUserVector(userId);
+    const bookVector = this.createBookVector(sourceBook);
+    
+    // Blend user preferences with source book characteristics
+    const biasedVector = { ...baseVector };
+    
+    // Increase weight for source book's genres
+    if (bookVector.genres) {
+      Object.keys(bookVector.genres).forEach(genre => {
+        biasedVector.genres[genre] = (biasedVector.genres[genre] || 0) + 0.3;
+      });
+    }
+    
+    // Increase weight for source book's authors
+    if (bookVector.authors) {
+      Object.keys(bookVector.authors).forEach(author => {
+        biasedVector.authors[author] = (biasedVector.authors[author] || 0) + 0.5;
+      });
+    }
+    
+    // Bias towards similar complexity and length
+    biasedVector.complexity = (biasedVector.complexity + bookVector.complexity * 2) / 3;
+    biasedVector.pageLength = (biasedVector.pageLength + bookVector.pageLength * 2) / 3;
+    
+    return biasedVector;
+  }
+
+  // Generate detailed explanation with multiple factors
+  generateDetailedExplanation(userVector, bookVector, scores) {
+    const explanations = [];
+    
+    // Genre matches
+    const matchingGenres = Object.keys(userVector.genres).filter(genre => 
+      bookVector.genres[genre] && userVector.genres[genre] > 0.1
+    );
+    if (matchingGenres.length > 0) {
+      explanations.push(`Matches your interest in ${matchingGenres.slice(0, 2).join(' and ')}`);
+    }
+    
+    // Author matches
+    const matchingAuthors = Object.keys(userVector.authors).filter(author => 
+      bookVector.authors[author] && userVector.authors[author] > 0.1
+    );
+    if (matchingAuthors.length > 0) {
+      explanations.push(`By ${matchingAuthors[0]}, an author you've enjoyed`);
+    }
+    
+    // Rating
+    if (bookVector.rating >= 4.0) {
+      explanations.push(`Highly rated (${bookVector.rating.toFixed(1)}/5)`);
+    }
+    
+    // Complexity match
+    const complexityDiff = Math.abs(userVector.complexity - bookVector.complexity);
+    if (complexityDiff < 0.5) {
+      explanations.push('Matches your preferred reading level');
+    }
+    
+    // Length preference
+    const lengthDiff = Math.abs(userVector.pageLength - bookVector.pageLength);
+    if (lengthDiff < 100) {
+      explanations.push('Good length for your preferences');
+    }
+    
+    // Diversity bonus explanation
+    if (scores.diversityBonus > 0.1) {
+      explanations.push('Explores new genres you might enjoy');
+    }
+    
+    // Popularity bonus explanation
+    if (scores.popularityBonus > 0.1) {
+      explanations.push('Popular among readers with similar tastes');
+    }
+    
+    return explanations.length > 0 ? explanations.join('. ') : 'Recommended based on your reading history';
+  }
+
+  // Update user preferences based on interactions
+  updateUserPreferences(userId, book, interactionType) {
+    const profile = userProfiles[userId];
+    if (!profile.mlLearning) {
+      profile.mlLearning = {
+        interactions: [],
+        lastUpdated: new Date()
+      };
+    }
+    
+    // Record interaction
+    profile.mlLearning.interactions.push({
+      bookId: book.id,
+      type: interactionType, // 'view', 'favorite', 'add_to_list', 'rate'
+      timestamp: new Date(),
+      genres: book.categories || [],
+      authors: book.authors || [],
+      complexity: book.complexityScore || 2.5,
+      pageCount: book.pageCount || 300
+    });
+    
+    // Keep only recent interactions for performance
+    if (profile.mlLearning.interactions.length > 50) {
+      profile.mlLearning.interactions = profile.mlLearning.interactions.slice(-50);
+    }
+    
+    profile.mlLearning.lastUpdated = new Date();
+    
+    // Update user vector based on this interaction
+    this.updateUserVectorFromInteraction(userId, book, interactionType);
   }
 }
 

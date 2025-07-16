@@ -54,12 +54,35 @@ router.post('/register', (req, res) => {
     },
     readingHistory: [],
     favoriteBooks: [],
-    readingLists: [{
-      id: 'default',
-      name: 'Want to Read',
-      books: [],
-      createdAt: new Date()
-    }],
+    readingLists: [
+      {
+        id: 'want-to-read',
+        name: 'Want to Read',
+        description: 'Books you plan to read in the future',
+        type: 'default',
+        books: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'currently-reading',
+        name: 'Currently Reading',
+        description: 'Books you are actively reading now',
+        type: 'default',
+        books: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'read',
+        name: 'Read',
+        description: 'Books you have finished reading',
+        type: 'default',
+        books: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ],
     recommendations: {
       useML: false,
       lastUpdated: null

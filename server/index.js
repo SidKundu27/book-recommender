@@ -61,8 +61,12 @@ const buildGoogleBooksQuery = (searchData) => {
 };
 
 // Helper function to enhance book data
-const enhanceBookData = (book) => {
+const enhanceBookData = (book, bookId = null) => {
+	if (!book) return null;
+	
 	return {
+		// Ensure we always have an ID
+		id: bookId || book.id || `book_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
 		...book,
 		// Add computed fields for future ML features
 		popularityScore: (book.ratingsCount || 0) * (book.averageRating || 0),
@@ -172,10 +176,10 @@ app.post("/api/searchBooks", (req, res) => {
 			// Get detailed information for each book
 			const bookDetailsRequests = response.data.items.map((item) =>
 				axios.get(`https://www.googleapis.com/books/v1/volumes/${item.id}`)
-					.then(detailResponse => enhanceBookData(detailResponse.data.volumeInfo))
+					.then(detailResponse => enhanceBookData(detailResponse.data.volumeInfo, item.id))
 					.catch(error => {
 						console.error(`Error fetching details for book ${item.id}:`, error);
-						return enhanceBookData(item.volumeInfo);
+						return enhanceBookData(item.volumeInfo, item.id);
 					})
 			);
 			
@@ -217,7 +221,7 @@ app.post("/api/findBook", (req, res) => {
 			
 			// Calls another api to get html tags (as google api does not give them without the id paramater)
 			const bookDetailsRequests = await axios.get(`https://www.googleapis.com/books/v1/volumes/${response.data.items[0].id}`)
-			book = enhanceBookData(bookDetailsRequests.data.volumeInfo);
+			book = enhanceBookData(bookDetailsRequests.data.volumeInfo, response.data.items[0].id);
 			genre =
 				book.categories && book.categories.length > 0
 					? book.categories[0]
@@ -256,25 +260,32 @@ app.get('/api/getBookRecommendation', (req, res) => {
 
 // Separate function for Google-based recommendations
 const getGoogleBasedRecommendations = (res) => {
-	if (genre === "") {
-		return res.status(404).send({ error: "No Genre Found" });
+	// If no genre is set, use popular genres for general recommendations
+	let currentGenre = genre;
+	if (!currentGenre || currentGenre === "") {
+		const popularGenres = ['Fiction', 'Mystery', 'Romance', 'Science Fiction', 'Fantasy', 'Biography'];
+		currentGenre = popularGenres[Math.floor(Math.random() * popularGenres.length)];
+		console.log(`No genre set, using fallback genre: ${currentGenre}`);
 	}
 
 	// Enhanced search queries for better recommendations
 	const searchQueries = [
 		// Genre-based recommendations
-		`subject:${genre}`,
-		`subject:"${genre}"`,
+		`subject:${currentGenre}`,
+		`subject:"${currentGenre}"`,
 		// Author-based recommendations if available
 		...(book.authors ? book.authors.slice(0, 2).map(author => `inauthor:"${author}"`).filter(Boolean) : []),
-		// Similar page count for complexity matching
-		...(book.pageCount ? [`subject:${genre}+pages:${Math.max(100, book.pageCount - 100)}-${book.pageCount + 100}`] : []),
+		// Similar page count for complexity matching (if book is available)
+		...(book.pageCount ? [`subject:${currentGenre}+pages:${Math.max(100, book.pageCount - 100)}-${book.pageCount + 100}`] : []),
 		// Popular books in genre
-		`subject:${genre}+orderBy=relevance`,
+		`subject:${currentGenre}+orderBy=relevance`,
 		// Recent books in genre (if we have publication date)
-		...(book.publishedDate ? [`subject:${genre}+publishedDate:${book.publishedDate.split('-')[0]}-${new Date().getFullYear()}`] : []),
+		...(book.publishedDate ? [`subject:${currentGenre}+publishedDate:${book.publishedDate.split('-')[0]}-${new Date().getFullYear()}`] : []),
 		// Highly rated books in genre
-		`subject:${genre}+filter=paid-ebooks`,
+		`subject:${currentGenre}+filter=paid-ebooks`,
+		// General popular books if no specific book context
+		'bestseller+fiction',
+		'award+winner+books'
 	];
 
 	// Execute multiple searches for diverse recommendations
@@ -302,9 +313,9 @@ const getGoogleBasedRecommendations = (res) => {
 			const uniqueItems = allItems.filter((item, index, self) => {
 				if (!item || !item.id || !item.volumeInfo) return false;
 				
-				// Exclude the current book and ensure unique IDs
+				// Exclude the current book (if available) and ensure unique IDs
 				const isUnique = index === self.findIndex(t => t.id === item.id);
-				const isNotCurrentBook = item.id !== book.id;
+				const isNotCurrentBook = !book || !book.id || item.id !== book.id;
 				const hasTitle = item.volumeInfo.title;
 				const hasValidImage = item.volumeInfo.imageLinks?.thumbnail || item.volumeInfo.imageLinks?.smallThumbnail;
 				
@@ -337,8 +348,8 @@ const getGoogleBasedRecommendations = (res) => {
 			// Get detailed information for recommendations
 			const bookDetailsRequests = bestBooks.map((item) =>
 				axios.get(`https://www.googleapis.com/books/v1/volumes/${item.id}`)
-					.then(detailResponse => enhanceBookData(detailResponse.data.volumeInfo))
-					.catch(() => enhanceBookData(item.volumeInfo))
+					.then(detailResponse => enhanceBookData(detailResponse.data.volumeInfo, item.id))
+					.catch(() => enhanceBookData(item.volumeInfo, item.id))
 			);
 
 			try {
@@ -450,13 +461,110 @@ app.get('/api/book/:id', (req, res) => {
 	
 	axios.get(`https://www.googleapis.com/books/v1/volumes/${bookId}`)
 		.then(response => {
-			const enhancedBook = enhanceBookData(response.data.volumeInfo);
+			const enhancedBook = enhanceBookData(response.data.volumeInfo, bookId);
 			res.status(200).send(enhancedBook);
 		})
 		.catch(error => {
 			console.error('Book details error:', error);
 			res.status(404).send({ error: "Book not found" });
 		});
+});
+
+// Enhanced ML recommendation endpoints
+app.get('/api/ml/recommendations/:userId', async (req, res) => {
+	const userId = req.params.userId;
+	const count = parseInt(req.query.count) || 6;
+	const genre = req.query.genre;
+	
+	try {
+		const recommendations = await mlEngine.getEnhancedRecommendations(userId, count, genre);
+		res.status(200).send(recommendations);
+	} catch (error) {
+		console.error('Enhanced ML recommendations error:', error);
+		res.status(500).send({ error: "ML recommendation service error" });
+	}
+});
+
+// "More like this" recommendations
+app.post('/api/ml/similar/:userId', async (req, res) => {
+	const userId = req.params.userId;
+	const { sourceBook } = req.body;
+	const count = parseInt(req.query.count) || 6;
+	
+	try {
+		const recommendations = await mlEngine.getSimilarBooks(userId, sourceBook, count);
+		res.status(200).send(recommendations);
+	} catch (error) {
+		console.error('Similar books error:', error);
+		res.status(500).send({ error: "Similar books recommendation error" });
+	}
+});
+
+// Record user interaction for ML learning
+app.post('/api/ml/interaction/:userId', (req, res) => {
+	const userId = req.params.userId;
+	const { book, interactionType } = req.body;
+	
+	try {
+		mlEngine.updateUserPreferences(userId, book, interactionType);
+		res.status(200).send({ message: "Interaction recorded" });
+	} catch (error) {
+		console.error('Interaction recording error:', error);
+		res.status(500).send({ error: "Failed to record interaction" });
+	}
+});
+
+// Get user's ML profile and insights
+app.get('/api/ml/profile/:userId', (req, res) => {
+	const userId = req.params.userId;
+	
+	try {
+		const userVector = mlEngine.createUserVector(userId);
+		const profile = userProfiles[userId];
+		
+		const mlProfile = {
+			preferences: {
+				topGenres: Object.entries(userVector.genres)
+					.sort(([,a], [,b]) => b - a)
+					.slice(0, 5)
+					.map(([genre, score]) => ({ genre, score })),
+				topAuthors: Object.entries(userVector.authors)
+					.sort(([,a], [,b]) => b - a)
+					.slice(0, 3)
+					.map(([author, score]) => ({ author, score })),
+				averageComplexity: userVector.complexity,
+				preferredPageLength: userVector.pageLength
+			},
+			stats: {
+				totalBooks: profile.favoriteBooks?.length || 0,
+				totalInteractions: profile.mlLearning?.interactions?.length || 0,
+				profileLastUpdated: profile.mlLearning?.lastUpdated || null
+			}
+		};
+		
+		res.status(200).send(mlProfile);
+	} catch (error) {
+		console.error('ML profile error:', error);
+		res.status(500).send({ error: "Failed to generate ML profile" });
+	}
+});
+
+// Debug endpoint to check user authentication
+app.get('/api/debug/user/:userId', (req, res) => {
+	const userId = req.params.userId;
+	const profile = userProfiles[userId];
+	
+	if (!profile) {
+		return res.status(404).json({ error: 'User profile not found' });
+	}
+	
+	res.json({
+		userId: userId,
+		username: profile.username,
+		favoriteBooks: profile.favoriteBooks.length,
+		readingLists: profile.readingLists.length,
+		lastLogin: profile.lastLogin
+	});
 });
 
 app.listen(5000, () => { 

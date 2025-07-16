@@ -13,6 +13,9 @@ function BookDetails({
   const [isFavorite, setIsFavorite] = useState(false);
   const [isInReadingList, setIsInReadingList] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
+  const [showCreateListModal, setShowCreateListModal] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [newListDescription, setNewListDescription] = useState('');
   const [userLists, setUserLists] = useState([]);
   const [defaultImage, setDefaultImage] = useState('');
 
@@ -35,8 +38,28 @@ function BookDetails({
   useEffect(() => {
     if (user) {
       fetchUserLists();
+      checkFavoriteStatus();
     }
-  }, [user]);
+  }, [user, bookDetails]);
+
+  const checkFavoriteStatus = async () => {
+    if (!user || !bookDetails) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:5000/api/reading-lists/favorites', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const favorites = await response.json();
+        const isBookFavorited = favorites.some(book => book.id === bookDetails.id);
+        setIsFavorite(isBookFavorited);
+      }
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown';
@@ -91,11 +114,30 @@ function BookDetails({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ bookId: bookDetails.id, book: bookDetails })
+        body: JSON.stringify({ 
+          bookId: bookDetails.id, 
+          book: bookDetails 
+        })
       });
       
       if (response.ok) {
         setIsFavorite(!isFavorite);
+        console.log('Favorite toggled successfully');
+        
+        // Show success message
+        const action = isFavorite ? 'removed from' : 'added to';
+        console.log(`Book ${action} favorites`);
+      } else {
+        const errorData = await response.json();
+        console.error('Error toggling favorite:', errorData);
+        
+        // Handle specific error cases
+        if (errorData.error === 'Book already in favorites') {
+          console.log('Book is already in favorites, updating UI state');
+          setIsFavorite(true);
+        } else {
+          alert('Error updating favorites: ' + errorData.error);
+        }
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -120,9 +162,66 @@ function BookDetails({
       if (response.ok) {
         setIsInReadingList(true);
         setShowListModal(false);
+        console.log('Book added to reading list successfully');
+        // Refresh the lists to show updated book count
+        fetchUserLists();
+      } else {
+        const errorData = await response.json();
+        console.error('Error adding to reading list:', errorData);
+        if (errorData.error === 'Book already in this list') {
+          alert('This book is already in that reading list.');
+        } else {
+          alert('Error adding book to list: ' + errorData.error);
+        }
       }
     } catch (error) {
       console.error('Error adding to reading list:', error);
+      alert('Error adding book to reading list');
+    }
+  };
+
+  const createNewList = async () => {
+    if (!user || !newListName.trim()) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      const response = await fetch('http://localhost:5000/api/reading-lists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          name: newListName.trim(),
+          description: newListDescription.trim() || '',
+          type: 'custom'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('New list created:', data.list);
+        
+        // Add the book to the newly created list
+        await addToReadingList(data.list.id);
+        
+        // Reset form and close modals
+        setNewListName('');
+        setNewListDescription('');
+        setShowCreateListModal(false);
+        setShowListModal(false);
+        
+        // Refresh the lists
+        fetchUserLists();
+      } else {
+        const errorData = await response.json();
+        console.error('Error creating list:', errorData);
+        alert('Error creating list: ' + errorData.error);
+      }
+    } catch (error) {
+      console.error('Error creating new list:', error);
+      alert('Error creating new list');
     }
   };
 
@@ -138,6 +237,9 @@ function BookDetails({
       if (response.ok) {
         const data = await response.json();
         setUserLists(data.lists || []);
+        console.log('User lists fetched:', data.lists);
+      } else {
+        console.error('Failed to fetch user lists');
       }
     } catch (error) {
       console.error('Error fetching user lists:', error);
@@ -353,9 +455,70 @@ function BookDetails({
                 </button>
               ))}
               
+              <button
+                className="list-option create-new-list"
+                onClick={() => setShowCreateListModal(true)}
+              >
+                <span className="list-name">+ Create New List</span>
+              </button>
+              
               {userLists.length === 0 && (
-                <p className="no-lists">No reading lists yet. Create one in your profile!</p>
+                <p className="no-lists">No reading lists yet. Create one above!</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Create New List Modal */}
+      {showCreateListModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateListModal(false)}>
+          <div className="list-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create New Reading List</h3>
+              <button className="modal-close" onClick={() => setShowCreateListModal(false)}>×</button>
+            </div>
+            
+            <div className="create-list-form">
+              <div className="form-group">
+                <label htmlFor="listName">List Name *</label>
+                <input
+                  type="text"
+                  id="listName"
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  placeholder="Enter list name..."
+                  maxLength={100}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="listDescription">Description (optional)</label>
+                <textarea
+                  id="listDescription"
+                  value={newListDescription}
+                  onChange={(e) => setNewListDescription(e.target.value)}
+                  placeholder="Enter list description..."
+                  maxLength={300}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="form-actions">
+                <button 
+                  className="btn-secondary" 
+                  onClick={() => setShowCreateListModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn-primary" 
+                  onClick={createNewList}
+                  disabled={!newListName.trim()}
+                >
+                  Create & Add Book
+                </button>
+              </div>
             </div>
           </div>
         </div>
